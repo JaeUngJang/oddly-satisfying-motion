@@ -1,0 +1,218 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   A restrained hierarchy on a white page. Pure monochrome read as "all one
+   color", so four things now carry meaning, each with one job:
+
+   1. Two surface tones group things. --surface is the live stage and code;
+      --surface-2 is a control column (catalog sidebar, parameter panel) and
+      the mat under a tile's recording.
+   2. Three text levels. ink = content, muted = body and labels (AA at any
+      size), faint = tertiary only: >= 14px terms at >= 3:1, disabled rows,
+      decorative separators. Faint is 3.45:1 on white, so never 12px copy.
+   3. ONE accent, locked to the product: the iOS blue of the button itself.
+      It marks "interactive or active", nothing else: text links, the active
+      nav item, the active filter, focus rings, the slider, the haptic toggle's
+      `true`, the current breadcrumb, the measured visual row. Never a large
+      fill, never a primary button (those stay ink), never a heading.
+      --accent is for marks (3.65:1 on white, above the 3:1 non-text bar).
+      --accent-text is the same hue (210deg) darkened for words, because
+      #0A84FF text is 3.65:1 on white and fails AA; #0066CC is 5.57:1.
+   4. Muted pastels name the catalog axes (surface / trigger / intent) on
+      chips and on the sidebar's group swatches, so a tile's chips key back
+      to the filter that finds it.
+   No gradients, no shadows, no glass in the chrome.
+--------------------------------------------------------------------------- */
+:root {
+  --bg: #ffffff;
+  --surface: #fafafa;
+  --surface-2: #f4f4f2;
+  --line: #e6e6e6;
+  --ink: #111111;
+  /* Pressed/hover face of the solid button. Light: #333 on white text = 12.6:1. */
+  --ink-hover: #333333;
+  /* 6.69:1 on white, 6.07:1 on --surface-2. */
+  --muted: #5c5c5c;
+  /* 3.45:1 on white, 3.13:1 on --surface-2: see rule 2 above. */
+  --faint: #8a8a8a;
+  --accent: #0a84ff;
+  --accent-soft: #e9f2ff;
+  /* 4.93:1 on --accent-soft, 5.05:1 on --surface-2. */
+  --accent-text: #0066cc;
+
+  /* Chip text on its pastel: 4.98 / 6.08 / 4.62 :1. */
+  --tag-surface-bg: #e1f3fe;
+  --tag-surface-fg: #1f6c9f;
+  --tag-trigger-bg: #edf3ec;
+  --tag-trigger-fg: #346538;
+  --tag-intent-bg: #fbf3db;
+  --tag-intent-fg: #956400;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface-2: #161616;
+    --line: #262626;
+    --ink: #f2f2f2;
+    /* Dark: #d6d6d6 fill on #0a0a0a text = 15.9:1. */
+    --ink-hover: #d6d6d6;
+    /* 9.44:1 on --bg, 8.63:1 on --surface-2. */
+    --muted: #b3b3b3;
+    /* 4.61:1 on --bg, 4.22:1 on --surface-2. */
+    --faint: #7a7a7a;
+    --accent: #409cff;
+    --accent-soft: #0f2540;
+    /* #409cff already clears AA on dark (6.99:1 on --bg, 5.46:1 on soft). */
+    --accent-text: #409cff;
+
+    /* Each chip: a light tint of its hue as text, on that tint at 18% over the
+       surface. Keeping the light-mode text instead would be 2.6-3.4:1.
+       Measured 7.5-7.9:1 on --bg, 6.5-6.8:1 on --surface-2. */
+    --tag-surface-fg: #86c2ea;
+    --tag-surface-bg: rgb(134 194 234 / 0.18);
+    --tag-trigger-fg: #9acb9e;
+    --tag-trigger-bg: rgb(154 203 158 / 0.18);
+    --tag-intent-fg: #e4bb67;
+    --tag-intent-bg: rgb(228 187 103 / 0.18);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-hover: var(--ink-hover);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-tag-surface: var(--tag-surface-bg);
+  --color-tag-surface-fg: var(--tag-surface-fg);
+  --color-tag-trigger: var(--tag-trigger-bg);
+  --color-tag-trigger-fg: var(--tag-trigger-fg);
+  --color-tag-intent: var(--tag-intent-bg);
+  --color-tag-intent-fg: var(--tag-intent-fg);
+
+  /* Self-hosted through the `geist` package; wired in layout.tsx. The stack
+     after it is only what shows while the font file is still in flight. */
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", SFMono-Regular,
+    Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Text links. Most sit inside muted copy, where the accent alone is 1.2:1
+   against the words around it, so the underline is the cue that is not color
+   (WCAG 1.4.1). It stays soft until hover. */
+.link {
+  color: var(--accent-text);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in srgb, var(--accent-text) 40%, transparent);
+}
+
+.link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* Skip link: off-screen until it takes focus. */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 40;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* Small mono label: control-group names, breadcrumbs, meta lines, counts.
+   Sentence case on purpose. An uppercase wide-tracked eyebrow above every
+   heading is the templated rhythm this site does not use.
+   12px and muted: at that size faint would fail AA. */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Spec values that sit in a column and must not jitter between rows. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reading measure for prose. */
+.prose-measure {
+  max-width: 65ch;
+  line-height: 1.6;
+}
+
+/* Nothing on the chrome animates but video playback and short state fades.
+   The units are the motion; the site stays still.
+
+   `live/*` drives transform per frame and opts out with `transition: none`;
+   the property list below is narrower than the `all` default for that reason. */
+/* `outline-color` is deliberately absent: a focus ring that fades in is a
+   worse focus ring. It appears instantly. */
+* {
+  transition-property: color, background-color, border-color, opacity,
+    transform;
+  transition-duration: 120ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Hover / active / focus on anything the pointer can hit. */
+a,
+button,
+input,
+summary {
+  transition-duration: 150ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

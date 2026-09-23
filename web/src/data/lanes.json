@@ -1,0 +1,59 @@
+{
+  "_note": "Per-unit timing lanes, milliseconds from touch-down. These are what the interactive ports in src/components/live run against: a port lights a marker by its `id` at the moment the thing actually happens, so the ids here and the emit() calls there are one set. The numbers stay the units' declared budgets, taken from the Swift. success-check is measured from the press, so it carries the demo recipe's 600 ms loading stage in front of the check's own 0.06/0.30/0.34 s choreography.",
+  "axisMs": 1200,
+  "tickMs": 200,
+  "units": {
+    "press": {
+      "label": "Press",
+      "rows": [
+        {
+          "id": "visual",
+          "label": "visual",
+          "marks": [{ "id": "press-visual", "label": "press", "from": 0, "to": 180 }]
+        },
+        {
+          "id": "haptic",
+          "label": "haptic",
+          "marks": [{ "id": "press-tap", "label": "tap", "t": 0 }]
+        }
+      ]
+    },
+    "success-check": {
+      "label": "Success Check",
+      "rows": [
+        {
+          "id": "visual",
+          "label": "visual",
+          "marks": [
+            { "id": "check-loading", "label": "loading", "from": 0, "to": 600 },
+            { "id": "check-ring", "label": "ring", "from": 600, "to": 960 },
+            { "id": "check-draw", "label": "draw", "from": 660, "to": 960 }
+          ]
+        },
+        {
+          "id": "haptic",
+          "label": "haptic",
+          "marks": [
+            { "id": "check-tap", "label": "tap", "t": 0 },
+            { "id": "check-success", "label": "success", "t": 940 }
+          ]
+        }
+      ]
+    },
+    "reward-burst": {
+      "label": "Reward Burst",
+      "rows": [
+        {
+          "id": "visual",
+          "label": "visual",
+          "marks": [{ "id": "burst-visual", "label": "particles", "from": 0, "to": 1000 }]
+        },
+        {
+          "id": "haptic",
+          "label": "haptic",
+          "marks": [{ "id": "burst-haptic", "label": "burst", "t": 0 }]
+        }
+      ]
+    }
+  }
+}

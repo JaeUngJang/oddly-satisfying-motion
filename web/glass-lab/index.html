@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glass Lab</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="head">
+  <h1>Liquid Glass fidelity lab</h1>
+  <p class="sub">Same scene, three renderers. Press and drag over A or B.</p>
+</header>
+
+<div class="rail">
+
+  <!-- ================= A · CSS / SVG ================= -->
+  <figure class="cell">
+    <div class="stage" id="stageA">
+      <div class="scene">
+        <div class="blob blob-orange"></div>
+        <div class="blob blob-purple"></div>
+      </div>
+      <div class="btnA-wrap" id="btnAWrap">
+        <!-- the drop shadow MUST NOT be a `filter` on an ancestor: a filtered
+             ancestor becomes a Backdrop Root and every descendant's
+             backdrop-filter then samples an empty backdrop.  Sibling +
+             box-shadow keeps the backdrop intact.                          -->
+        <span class="btnA-shadow"></span>
+        <div class="btnA" id="btnA">
+          <span class="btnA-refract"></span>
+          <span class="btnA-blur"></span><!-- only used when url() backdrop filters are unsupported -->
+          <span class="btnA-tint"></span>
+          <span class="btnA-rim"></span>
+          <span class="btnA-spec" id="btnASpec"></span>
+          <span class="btnA-label">Subscribe</span>
+        </div>
+      </div>
+    </div>
+    <figcaption>A &middot; CSS/SVG</figcaption>
+  </figure>
+
+  <!-- ================= B · WebGL ================= -->
+  <figure class="cell">
+    <div class="stage" id="stageB">
+      <canvas id="glCanvas" width="393" height="300"></canvas>
+      <span class="btnB-label" id="btnBLabel">Subscribe</span>
+      <div class="gl-fallback" id="glFallback" hidden>WebGL unavailable</div>
+    </div>
+    <figcaption>B &middot; WebGL</figcaption>
+  </figure>
+
+  <!-- ================= C · reference ================= -->
+  <figure class="cell">
+    <div class="stage" id="stageC">
+      <canvas id="refCanvas" width="393" height="300"></canvas>
+    </div>
+    <figcaption>
+      C &middot; iOS 26 reference
+      <button class="refswap" id="refSwap" type="button">frame: resting 52pt</button>
+    </figcaption>
+  </figure>
+
+</div>
+
+<section class="readout">
+  <p id="svgSupport" class="line">SVG filters in backdrop-filter: measuring&hellip;</p>
+  <p class="line">
+    <span class="probe-label">raw</span>
+    <span class="probe-strip"></span>
+    <span class="probe-label">backdrop-filter:url(#lab-shift)</span>
+    <span class="probe-strip"><span class="probe probe-bd-shift"></span></span>
+    <span class="probe-label">filter:url(#lab-shift)</span>
+    <span class="probe-strip"><span class="probe probe-dir-shift"></span></span>
+    <span class="probe-label">backdrop-filter:url(#lab-kill)</span>
+    <span class="probe-strip"><span class="probe probe-bd-kill"></span></span>
+    <span class="probe-note">lab-shift offsets + hue-rotates the backdrop it reads; lab-kill only floods</span>
+  </p>
+  <p id="frameStats" class="line">frame time (B): press and hold to measure</p>
+  <p class="line">
+    <label>backdrop bleed (A+B)
+      <input type="range" id="ctlBleed" min="0" max="0.6" step="0.01" value="0">
+      <output id="outBleed">0.00</output></label>
+    <label>B rim refraction
+      <input type="range" id="ctlRefract" min="0" max="24" step="0.5" value="7">
+      <output id="outRefract">7.0 px</output></label>
+    <span class="probe-note">measured bleed is 0 in RGB; raise it to see what the shader actually refracts</span>
+  </p>
+  <p id="notes" class="line dim"></p>
+</section>
+
+<!-- SVG filter definitions -->
+<svg class="defs" aria-hidden="true" width="0" height="0">
+  <defs>
+    <!-- The whole glass backdrop in ONE reference filter.
+         Measured in Chromium 152: a url() reference filter IS applied to a
+         backdrop, but only when it is the ENTIRE backdrop-filter value.
+         Writing `url(#f) blur(11px)` silently drops the reference filter, and
+         splitting the two across sibling elements does not chain either — the
+         later sibling re-samples the original backdrop.  So blur and saturate
+         have to live inside the filter graph, ahead of the displacement.   -->
+    <filter id="lab-refract" x="-25%" y="-25%" width="150%" height="150%"
+            color-interpolation-filters="sRGB" filterUnits="objectBoundingBox">
+      <feImage id="labRefractMap" x="0%" y="0%" width="100%" height="100%"
+               preserveAspectRatio="none" result="map"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5.5" result="blurred"/>
+      <feColorMatrix in="blurred" type="saturate" values="1.7" result="sat"/>
+      <feDisplacementMap id="labRefractDisp" in="sat" in2="map" scale="14"
+                         xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <!-- probe that must READ the backdrop: offset + hue-rotate -->
+    <filter id="lab-shift" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feOffset in="SourceGraphic" dx="9" dy="0" result="o"/>
+      <feColorMatrix in="o" type="hueRotate" values="150"/>
+    </filter>
+    <!-- probe that ignores its input entirely: flat magenta flood -->
+    <filter id="lab-kill" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feFlood flood-color="#ff00d0" flood-opacity="1"/>
+    </filter>
+  </defs>
+</svg>
+
+<script src="scene.js"></script>
+<script src="webgl.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

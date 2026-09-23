@@ -1,0 +1,14 @@
+{
+  "id": "success-check",
+  "name": "Success Check",
+  "layer": "primitive",
+  "summary": "Completion confirmed: circle scales in, checkmark draws with trim, .success haptic lands as the stroke completes.",
+  "tags": { "surface": ["button"], "trigger": ["complete"], "intent": ["confirm"] },
+  "core": "_core/WowCore.swift",
+  "platforms": { "swiftui": { "file": "WowSuccessCheck.swift", "minIOS": 16, "entry": "WowSuccessCheck" } },
+  "spec": { "hapticBudgetMs": 50, "visualBudgetMs": 85, "hapticMaxDurationMs": 120 },
+  "accessibility": { "reduceMotion": "no scale, no draw; 0.15 s cross-fade; same .success haptic, at +0.10 s", "hapticsOptional": true },
+  "sound": null,
+  "builtWith": ["Path", "trim(from:to:)", "scaleEffect", "spring(response:dampingFraction:)", "CHHapticEngine"],
+  "sources": ["Kaaresoja, Brewster & Lantz, ACM TAP 11(2), 2014"]
+}

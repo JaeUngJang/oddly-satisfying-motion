@@ -1,0 +1,14 @@
+{
+  "id": "press",
+  "name": "Press",
+  "layer": "primitive",
+  "summary": "Touch-down acknowledgement: scale + dim with spring return, .tap haptic fired before any visual work.",
+  "tags": { "surface": ["button"], "trigger": ["tap"], "intent": ["confirm"] },
+  "core": "_core/WowCore.swift",
+  "platforms": { "swiftui": { "file": "WowPress.swift", "minIOS": 16, "entry": "WowPressStyle / .wowPress()" } },
+  "spec": { "hapticBudgetMs": 50, "visualBudgetMs": 85, "hapticMaxDurationMs": 60 },
+  "accessibility": { "reduceMotion": "no scale, opacity dip", "hapticsOptional": true },
+  "sound": null,
+  "builtWith": ["ButtonStyle", "scaleEffect", "brightness", "spring(response:dampingFraction:)", "CHHapticEngine"],
+  "sources": ["Kaaresoja, Brewster & Lantz, ACM TAP 11(2), 2014"]
+}

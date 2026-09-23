@@ -1,0 +1,9 @@
+.build/
+*.xcodeproj
+xcuserdata/
+portability/*/Sources/Wow/
+*.png
+demo/Info.plist
+portability/*/Info.plist
+demo/recordings/
+.claude/

@@ -1,0 +1,10 @@
+{
+  "caption": "Copied as files into four host apps. xcodebuild, 2026-09-22.",
+  "columns": ["host", "target", "result", "warnings"],
+  "rows": [
+    { "host": "ios16-uikit-mixed", "target": "iOS 16.0", "result": "SUCCESS", "warnings": "0" },
+    { "host": "ios17-swiftui", "target": "iOS 17.0", "result": "SUCCESS", "warnings": "0" },
+    { "host": "with-design-system", "target": "iOS 17.0", "result": "SUCCESS", "warnings": "0" },
+    { "host": "swift6-strict", "target": "iOS 17.0 · Swift 6", "result": "SUCCESS", "warnings": "0" }
+  ]
+}

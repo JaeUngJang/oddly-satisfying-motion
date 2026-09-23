@@ -1,0 +1,14 @@
+{
+  "id": "reward-burst",
+  "name": "Reward Burst",
+  "layer": "primitive",
+  "summary": "Reward from the button that earned it: 12-40 particles with mass, drag, rotation and gravity, one tint with brightness variation, gone within ~1 s. .burst haptic first.",
+  "tags": { "surface": ["button"], "trigger": ["complete"], "intent": ["reward"] },
+  "core": "_core/WowCore.swift",
+  "platforms": { "swiftui": { "file": "WowRewardBurst.swift", "minIOS": 16, "entry": "WowRewardBurst / .wowRewardBurst(trigger:)" } },
+  "spec": { "hapticBudgetMs": 50, "visualBudgetMs": 85, "hapticMaxDurationMs": 150 },
+  "accessibility": { "reduceMotion": "no particles, single glow pulse from the button; haptic unchanged", "hapticsOptional": true },
+  "sound": null,
+  "builtWith": ["Canvas", "TimelineView(.animation)", "CHHapticEngine", "CHHapticParameterCurve"],
+  "sources": ["Kaaresoja, Brewster & Lantz, ACM TAP 11(2), 2014", "Hampton & Hildebrand, J. Consumer Research 52(5), 2026"]
+}

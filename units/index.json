@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "core": "_core/WowCore.swift",
+  "units": ["press", "success-check", "reward-burst"]
+}

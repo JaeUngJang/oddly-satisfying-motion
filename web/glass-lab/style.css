@@ -1,0 +1,280 @@
+/* ---------------------------------------------------------------
+   Glass Lab — scene constants measured from the iOS 26 screenshot
+   (1206x2622 @3x, device 402pt wide).  Stage is 393x300 px where
+   1 stage px == 1 device pt.
+   --------------------------------------------------------------- */
+:root {
+  --stage-w: 393px;
+  --stage-h: 300px;
+
+  /* backdrop gradient sampled at device y=903px (top of crop) and y=1803px */
+  --bg-top:    #e6e6eb;
+  --bg-bottom: #dbdce1;
+
+  /* circles: solid colour + alpha chosen so the composite matches the
+     measured values (240,200,168) and (215,168,225) */
+  --orange: rgba(244, 172, 110, 0.55);
+  --purple: rgba(209, 124, 223, 0.55);
+
+  /* button geometry: 300x52 pt capsule, centred in the stage */
+  --btn-w: 300px;
+  --btn-h: 52px;
+  --btn-x: 46.5px;
+  --btn-y: 124px;
+  --btn-r: 26px;
+
+  /* how opaque the tint layer of stage A is; the lab slider lowers it so the
+     rim refraction the SVG filter computes becomes visible */
+  --tint-a: 0.985;
+  --tint-a2: 0.965;
+  --tint-a3: 0.980;
+
+  /* measured glass colours */
+  --fill: 0, 131, 247;          /* #0083F7 measured interior           */
+  --fill-press: 0, 110, 224;    /* deepened tint while pressed          */
+  --rim: 56, 228, 255;          /* rim band extrapolated to depth 0      */
+
+  --ink: #1d1d1f;
+  --ink-dim: #6e6e73;
+  --page: #fbfbfd;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 28px 24px 48px;
+  background: var(--page);
+  color: var(--ink);
+  font: 400 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.head h1 { margin: 0 0 2px; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+.head .sub { margin: 0 0 22px; color: var(--ink-dim); font-size: 13px; }
+
+.rail {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  width: max-content;
+}
+
+.cell { margin: 0; }
+
+.stage {
+  position: relative;
+  width: var(--stage-w);
+  height: var(--stage-h);
+  overflow: hidden;
+  border-radius: 14px;
+  isolation: isolate;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+}
+
+.stage canvas { display: block; width: var(--stage-w); height: var(--stage-h); }
+
+figcaption {
+  margin-top: 8px;
+  font: 500 11.5px/1.4 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--ink-dim);
+  letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refswap {
+  font: inherit;
+  color: var(--ink-dim);
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.14);
+  border-radius: 6px;
+  padding: 2px 7px;
+  cursor: pointer;
+}
+.refswap:hover { color: var(--ink); border-color: rgba(0,0,0,0.3); }
+
+/* ---------------- shared scene (stage A) ---------------- */
+.scene {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, var(--bg-top), var(--bg-bottom));
+}
+.blob { position: absolute; border-radius: 50%; }
+.blob-orange {
+  left: -23.3px; top: -40px;
+  width: 259.7px; height: 259.7px;
+  background: var(--orange);
+}
+.blob-purple {
+  left: 196.7px; top: 136.7px;
+  width: 213px; height: 213px;
+  background: var(--purple);
+}
+
+/* ---------------- A · CSS/SVG button ---------------- */
+.btnA-wrap {
+  position: absolute;
+  left: var(--btn-x);
+  top: var(--btn-y);
+  width: var(--btn-w);
+  height: var(--btn-h);
+  will-change: transform;
+}
+
+/* drop shadow measured: ~9% darkening at the lower edge, fading over ~43pt,
+   ~4.5% above fading over ~25pt  ->  offset down + wide blur.
+   box-shadow on a SIBLING, never filter on an ancestor. */
+.btnA-shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--btn-r);
+  box-shadow:
+    0 3px 7px rgba(0, 0, 0, 0.10),
+    0 9px 22px rgba(0, 0, 0, 0.085);
+}
+
+.btnA {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--btn-r);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+/* layer 1 — the entire glass backdrop: blur, saturate and rim refraction,
+   all inside one SVG filter (see the comment on #lab-refract in the HTML:
+   mixing url() with native blur() in one list, or splitting them across two
+   elements, loses the reference filter).                               */
+.btnA-refract {
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  -webkit-backdrop-filter: url(#lab-refract);
+  backdrop-filter: url(#lab-refract);
+}
+/* layer 1b — plain blur for engines that cannot reference an SVG filter
+   from backdrop-filter; off unless <html> is marked. */
+.btnA-blur { position: absolute; inset: 0; border-radius: inherit; }
+.no-svg-backdrop .btnA-refract { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.no-svg-backdrop .btnA-blur {
+  -webkit-backdrop-filter: blur(11px) saturate(1.7);
+  backdrop-filter: blur(11px) saturate(1.7);
+}
+
+/* layer 2 — the tint.  Measured interior is ~94% opaque #0084F8.      */
+.btnA-tint {
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(to bottom,
+      rgba(var(--fill), var(--tint-a)) 0%,
+      rgba(var(--fill), var(--tint-a2)) 45%,
+      rgba(var(--fill), var(--tint-a3)) 100%);
+  transition: background 120ms linear;
+}
+.pressed .btnA-tint {
+  background:
+    linear-gradient(to bottom,
+      rgba(var(--fill-press), 0.995) 0%,
+      rgba(var(--fill-press), 0.985) 45%,
+      rgba(var(--fill-press), 0.992) 100%);
+}
+
+/* layer 3 — the 1pt rim band.  Measured ramp 45,210,253 -> fill over 3 device px. */
+.btnA-rim {
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  /* matches the measured 1.25pt ramp: bright at the very edge, gone by ~1.25pt */
+  box-shadow:
+    inset 0 0 0 0.5px rgba(var(--rim), 0.90),
+    inset 0 0 0 1px rgba(var(--rim), 0.42),
+    inset 0 0 2px 0.25px rgba(var(--rim), 0.18);
+}
+
+/* layer 4 — pointer-driven specular sweep along the top edge
+   (stand-in for device tilt; iOS drives this from the gyro)          */
+.btnA-spec {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 6px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.85;
+  background: radial-gradient(
+    46px 5px at var(--spec-x, 50%) 0.5px,
+    rgba(255, 255, 255, 0.40) 0%,
+    rgba(255, 255, 255, 0.10) 52%,
+    rgba(255, 255, 255, 0) 80%);
+}
+
+.btnA-label, .btnB-label {
+  position: relative;
+  z-index: 2;
+  color: #fff;
+  font: 600 17px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: -0.012em;
+}
+
+.btnB-label {
+  position: absolute;
+  left: var(--btn-x);
+  top: var(--btn-y);
+  width: var(--btn-w);
+  height: var(--btn-h);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.gl-fallback[hidden] { display: none; }
+.gl-fallback {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font: 500 12px ui-monospace, Menlo, monospace;
+  color: #b00;
+  background: #f4f4f6;
+}
+
+/* ---------------- readout ---------------- */
+.readout { margin-top: 26px; max-width: 1220px; }
+.line {
+  margin: 0 0 7px;
+  font: 400 12px/1.7 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--ink);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.line.dim { color: var(--ink-dim); }
+.probe-label { color: var(--ink-dim); }
+.probe-note { color: var(--ink-dim); }
+
+/* the probe strips sit over a striped field; if the SVG filter is honoured
+   the swatch reads flat magenta instead of stripes */
+.probe-strip {
+  position: relative;
+  display: inline-block;
+  width: 64px; height: 20px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: repeating-linear-gradient(45deg, #2e8b57 0 6px, #ffd400 6px 12px);
+  vertical-align: middle;
+}
+.probe { position: absolute; inset: 0; display: block; }
+.probe-bd-shift { -webkit-backdrop-filter: url(#lab-shift); backdrop-filter: url(#lab-shift); }
+.probe-bd-kill  { -webkit-backdrop-filter: url(#lab-kill);  backdrop-filter: url(#lab-kill); }
+.probe-dir-shift { background: repeating-linear-gradient(45deg, #2e8b57 0 6px, #ffd400 6px 12px);
+                   filter: url(#lab-shift); }
+
+.defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* lab controls */
+.line label { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-dim); }
+.line input[type=range] { width: 120px; accent-color: #0084f8; }
+.line output { min-width: 52px; color: var(--ink); }

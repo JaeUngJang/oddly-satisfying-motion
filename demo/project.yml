@@ -1,0 +1,80 @@
+# WowDemo — measurement harness for the Wow Units.
+#
+# The unit files are referenced BY PATH, not copied: the demo compiles
+# ../units/_core/WowCore.swift and the three unit files in place, so what you measure here is
+# byte-for-byte what a user copies into their app.
+#
+# Generate + build + run:  demo/run.sh
+name: WowDemo
+
+options:
+  bundleIdPrefix: dev.wowunits
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"          # units use static mutable state (WowSettings/WowProbe); Swift 6 mode would reject it
+    # Simulator-only demo: never signed, so no team and no provisioning profile are needed.
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+  configs:
+    Debug:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG   # Probe.swift is #if DEBUG
+      GCC_PREPROCESSOR_DEFINITIONS: DEBUG=1
+
+targets:
+  WowDemo:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Sources
+        excludes:
+          - "**/*.json"
+      # The real unit files, compiled in place. Paths are relative to this spec.
+      - path: ../units/_core/WowCore.swift
+        group: Units/_core
+      - path: ../units/press/WowPress.swift
+        group: Units/press
+      - path: ../units/success-check/WowSuccessCheck.swift
+        group: Units/success-check
+      - path: ../units/reward-burst/WowRewardBurst.swift
+        group: Units/reward-burst
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.wowunits.demo
+        PRODUCT_NAME: WowDemo
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_FILE: Info.plist
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Wow Demo
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+
+schemes:
+  WowDemo:
+    build:
+      targets:
+        WowDemo: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    archive:
+      config: Release
