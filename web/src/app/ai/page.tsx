@@ -15,10 +15,10 @@ import { getCatalog } from "@/lib/units";
 // is the copy button at the end.
 
 export const metadata: Metadata = {
-  // Root layout appends "· Wow Units".
+  // Root layout appends "· Oddly Satisfying Motion".
   title: AI_TITLE,
   description:
-    "Wow Units described for AI systems, answer engines and coding agents: what a unit is, how to install it by copying files, what is measured, and what is not claimed.",
+    "Oddly Satisfying Motion described for AI systems, answer engines and coding agents: what a unit is, how to install it by copying files, what is measured, and what is not claimed.",
 };
 
 function Block({ block }: { block: AiBlock }) {
@@ -116,6 +116,12 @@ function Block({ block }: { block: AiBlock }) {
                 <br />
                 {`Tags: ${unit.tags}`}
                 <br />
+                {unit.states && (
+                  <>
+                    {`States: ${unit.states}`}
+                    <br />
+                  </>
+                )}
                 Links:{" "}
                 {unit.links.map((link, index) => (
                   <span key={link.href}>

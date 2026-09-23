@@ -12,7 +12,7 @@
 // the panel and go straight into `IOSButton`.
 
 import { memo, useCallback } from "react";
-import { IOSButton } from "./IOSButton";
+import { IOSButton, type PressPhase } from "./IOSButton";
 import { boolValue, numberValue, type ParamValues } from "./params";
 import type { LiveRow } from "./useLiveTimeline";
 
@@ -20,8 +20,10 @@ export type LivePortProps = {
   reduced: boolean;
   /** 1, or 4 under `slow ×4`. */
   timeScale: number;
-  /** Touch-down: starts the lane and fires `live_press`. */
+  /** Touch-down (idle → pressing): starts the lane, t = 0. */
   onPress: () => void;
+  /** Every `WowPressPhase` the button enters, for the page's readout and the lane. */
+  onPhaseChange: (phase: PressPhase) => void;
   /** Lights a marker in `src/data/lanes.json`. */
   emit: (row: LiveRow, id: string) => void;
   /** Bumped by Reset; ports drop whatever is in flight. */
@@ -34,6 +36,7 @@ export const LivePress = memo(function LivePress({
   reduced,
   timeScale,
   onPress,
+  onPhaseChange,
   emit,
   params,
 }: LivePortProps) {
@@ -58,6 +61,7 @@ export const LivePress = memo(function LivePress({
       pressScale={scale}
       pressDim={dim}
       onPressStart={press}
+      onPhaseChange={onPhaseChange}
     />
   );
 });

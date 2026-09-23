@@ -1,0 +1,74 @@
+{
+  "id": "label-roll",
+  "name": "Label Roll",
+  "layer": "primitive",
+  "summary": "Numbers and labels roll in the direction of change: up when the value rises, down when it falls, so the sign reads before the digits do. Monospaced digits hold the width. Silent on ordinary changes; one .tap only when a threshold you care about is crossed.",
+  "tags": {
+    "surface": [
+      "button"
+    ],
+    "trigger": [
+      "complete"
+    ],
+    "intent": [
+      "guide"
+    ]
+  },
+  "core": "_core/WowCore.swift",
+  "platforms": {
+    "swiftui": {
+      "file": "WowLabelRoll.swift",
+      "minIOS": 16,
+      "entry": "WowLabelRoll / WowLabelRollText"
+    }
+  },
+  "spec": {
+    "hapticBudgetMs": 50,
+    "visualBudgetMs": 85,
+    "hapticMaxDurationMs": 60
+  },
+  "accessibility": {
+    "reduceMotion": "no roll; the label cross-fades over 0.15 s (contentTransition(.opacity)); threshold haptic unchanged",
+    "hapticsOptional": true,
+    "voiceOver": "WowLabelRoll exposes the formatted number, prefix and suffix included, as its accessibilityValue and leaves the label to the host (.accessibilityLabel(\"Likes\")); WowLabelRollText exposes its current text as the label"
+  },
+  "sound": null,
+  "builtWith": [
+    "Text",
+    "monospacedDigit",
+    "contentTransition(.numericText)",
+    "spring(response:dampingFraction:)",
+    "transition(.move(edge:))",
+    "CHHapticEngine"
+  ],
+  "sources": [
+    "Apple SwiftUI docs, ContentTransition.numericText(value:), iOS 17: direction inferred from the change in value",
+    "Apple SwiftUI docs, ContentTransition.numericText(countsDown:), iOS 16: rolls only \"in certain environments\"; in app views it cross-fades before iOS 17 (Apple Developer Forums thread 733047, Oct 2023)",
+    "Apple SwiftUI docs, SensoryFeedback.increase / .decrease: \"an important value increased above a significant threshold\"",
+    "Cash App Design, Motion (design.cash.app/motion): \"Slide\" / \"Sequence\" vocabulary",
+    "motion.dev, Rolling Text Button (Matt Perry, 2026-07-29)",
+    "Kaaresoja, Brewster & Lantz, ACM TAP 11(2), 2014"
+  ],
+  "states": [
+    {
+      "state": "idle",
+      "motion": "static text; monospaced digits keep the width steady between values",
+      "haptic": "none"
+    },
+    {
+      "state": "rolling-up",
+      "motion": "value rose: changed digits roll upward, spring 0.30/0.85 (iOS 17+ numericText(value:)); iOS 16: the new label slides in from below while the old one fades; WowLabelRollText labels always roll up",
+      "haptic": "none; continuous updates stay silent"
+    },
+    {
+      "state": "rolling-down",
+      "motion": "value fell: changed digits roll downward, same spring; iOS 16: the new label slides in from above",
+      "haptic": "none"
+    },
+    {
+      "state": "threshold-crossed",
+      "motion": "the roll of that change, unchanged",
+      "haptic": ".tap once on the change that moves the value across hapticThreshold, either direction, fired before the roll; none when hapticThreshold is nil or haptic is false"
+    }
+  ]
+}

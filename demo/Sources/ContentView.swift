@@ -55,7 +55,7 @@ struct ContentView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Wow Units").font(.title2.weight(.semibold))
+            Text("Oddly Satisfying Motion").font(.title2.weight(.semibold))
             Text("Same button, same timing. One wears the units.")
                 .font(.footnote).foregroundStyle(.secondary)
         }

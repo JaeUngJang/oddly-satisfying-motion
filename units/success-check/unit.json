@@ -3,12 +3,65 @@
   "name": "Success Check",
   "layer": "primitive",
   "summary": "Completion confirmed: circle scales in, checkmark draws with trim, .success haptic lands as the stroke completes.",
-  "tags": { "surface": ["button"], "trigger": ["complete"], "intent": ["confirm"] },
+  "tags": {
+    "surface": [
+      "button"
+    ],
+    "trigger": [
+      "complete"
+    ],
+    "intent": [
+      "confirm"
+    ]
+  },
   "core": "_core/WowCore.swift",
-  "platforms": { "swiftui": { "file": "WowSuccessCheck.swift", "minIOS": 16, "entry": "WowSuccessCheck" } },
-  "spec": { "hapticBudgetMs": 50, "visualBudgetMs": 85, "hapticMaxDurationMs": 120 },
-  "accessibility": { "reduceMotion": "no scale, no draw; 0.15 s cross-fade; same .success haptic, at +0.10 s", "hapticsOptional": true },
+  "platforms": {
+    "swiftui": {
+      "file": "WowSuccessCheck.swift",
+      "minIOS": 16,
+      "entry": "WowSuccessCheck"
+    }
+  },
+  "spec": {
+    "hapticBudgetMs": 50,
+    "visualBudgetMs": 85,
+    "hapticMaxDurationMs": 120
+  },
+  "accessibility": {
+    "reduceMotion": "no scale, no draw; 0.15 s cross-fade; same .success haptic, at +0.10 s",
+    "hapticsOptional": true
+  },
   "sound": null,
-  "builtWith": ["Path", "trim(from:to:)", "scaleEffect", "spring(response:dampingFraction:)", "CHHapticEngine"],
-  "sources": ["Kaaresoja, Brewster & Lantz, ACM TAP 11(2), 2014"]
+  "builtWith": [
+    "Path",
+    "trim(from:to:)",
+    "scaleEffect",
+    "spring(response:dampingFraction:)",
+    "CHHapticEngine"
+  ],
+  "sources": [
+    "Kaaresoja, Brewster & Lantz, ACM TAP 11(2), 2014"
+  ],
+  "states": [
+    {
+      "state": "idle",
+      "motion": "nothing drawn",
+      "haptic": "none"
+    },
+    {
+      "state": "drawing",
+      "motion": "ring scales 0.6→1 (spring 0.28/0.72), check stroke trims 0→1 over 300 ms from +60 ms",
+      "haptic": ".success at +340 ms, on the frame the stroke completes"
+    },
+    {
+      "state": "complete",
+      "motion": "holds the drawn check",
+      "haptic": "none"
+    },
+    {
+      "state": "reset",
+      "motion": "fade out 120 ms, ready to run again",
+      "haptic": "none"
+    }
+  ]
 }

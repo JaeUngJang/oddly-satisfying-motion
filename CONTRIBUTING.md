@@ -19,6 +19,7 @@ units/<id>/
 6. Reduce Motion is honored inside the file with a meaning-preserving fallback (cross-fade, glow), never by simply removing the motion.
 7. Responds to a user action only. Nothing auto-plays, loops, or seeks attention.
 8. `static let spec = WowSpec(...)` matches `unit.json` `spec`: haptic within 50 ms of touch, first frame within 85 ms.
+9. Interaction states are explicit. A pressable unit implements `pressing`, `released`, `cancelled` (dragged or released outside, re-entry resumes silently) and `interrupted` (system took the touch), and `unit.json` lists each state with its motion and its haptic under `states`. Units that run a sequence (loading, hold, swap) list their phases the same way.
 
 ## Before opening the pull request
 

@@ -14,7 +14,12 @@
 //   · the overlay is drawn AFTER the button and outside its press transform, which is what
 //     a SwiftUI `.overlay` on the wrapper does;
 //   · the haptic marker fires before any visual work, the order the Swift insists on;
-//   · Reduce Motion: no particles, one 0.4 s glow pulse, same haptic.
+//   · Reduce Motion: no particles, one 0.4 s glow pulse, same haptic;
+//   · the burst fires on the release, the Button's action, never on a press that ends
+//     `cancelled` or `interrupted`: this is a complete-triggered unit. The lane still starts
+//     at touch-down with the press's own tap at 0; the burst's marks are declared from the
+//     release (lanes.json `anchor: "release"`), so it reads tap at 0 → released at N → burst
+//     from N. A new touch-down is a new run and drops a burst still flying from the last.
 //
 // `count` and `duration` are the Swift's own parameters and come from the panel. The stage
 // clips the burst at its edges the way a screen does; the lane, not the stage, is where the
@@ -53,6 +58,7 @@ export const LiveRewardBurst = memo(function LiveRewardBurst({
   reduced,
   timeScale,
   onPress,
+  onPhaseChange,
   emit,
   resetKey,
   params,
@@ -104,8 +110,17 @@ export const LiveRewardBurst = memo(function LiveRewardBurst({
     frame.current = requestAnimationFrame(tick);
   }, [scale]);
 
-  const press = useCallback(() => {
+  /** Touch-down: a new run starts at t = 0 with the press's tap, and nothing else yet. */
+  const down = useCallback(() => {
+    clear();
     onPress();
+    // The button under the burst is `.wowPress()`: this is its tap, not the unit's `.burst`,
+    // so the unit's `haptic` parameter does not gate it.
+    emit("haptic", "burst-tap");
+  }, [clear, emit, onPress]);
+
+  /** `released`: the Button's action, which is what triggers the burst. */
+  const run = useCallback(() => {
     // `haptic: false` means WowHaptics is never asked, so the haptic row stays empty.
     if (haptic) emit("haptic", "burst-haptic"); // WowHaptics.play(.burst) — 1, before any view work
     emit("visual", "burst-visual"); // WowProbe.onVisual?("reward-burst", …) — 2
@@ -147,7 +162,7 @@ export const LiveRewardBurst = memo(function LiveRewardBurst({
     live.current = { burst, box, ctx, palette: burstPalette(tint), tint, hostW };
     t0.current = performance.now();
     frame.current = requestAnimationFrame(tick);
-  }, [count, duration, emit, haptic, onPress, reducedRef, tick]);
+  }, [count, duration, emit, haptic, reducedRef, tick]);
 
   useEffect(() => clear, [clear]);
 
@@ -162,7 +177,9 @@ export const LiveRewardBurst = memo(function LiveRewardBurst({
       ariaLabel="Claim, press to fire the reward burst"
       reduced={reduced}
       timeScale={timeScale}
-      onPressStart={press}
+      onPressStart={down}
+      onPressEnd={run}
+      onPhaseChange={onPhaseChange}
       hostRef={hostRef}
       overlay={
         <canvas

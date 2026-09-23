@@ -7,11 +7,12 @@ import { CopyButton } from "@/components/CopyButton";
 import { Disclosure } from "@/components/Disclosure";
 import { PortabilityTable } from "@/components/PortabilityTable";
 import { SectionHeading } from "@/components/SectionHeading";
+import { StatesTable } from "@/components/StatesTable";
 import { TagChips } from "@/components/TagChips";
 import { UnitLive } from "@/components/UnitLive";
 import { UnitTile } from "@/components/UnitTile";
 import { ISSUES_URL } from "@/lib/site";
-import { getCatalog, getUnitIds, getUnitTiles } from "@/lib/units";
+import { getCatalog, getUnitIds, getUnitTiles, hasMedia } from "@/lib/units";
 import lanesData from "@/data/lanes.json";
 import portabilityData from "@/data/portability.json";
 import type { Portability, TimelineLane, UnitLanes } from "@/lib/types";
@@ -20,7 +21,7 @@ const lanes = lanesData as unknown as UnitLanes;
 const portability = portabilityData as unknown as Portability;
 
 /** Date the units and the portability run were last verified. */
-const VERIFIED_ON = "2026-09-22";
+const VERIFIED_ON = "2026-09-23";
 
 const TOC = [
   ["live-example", "Live example"],
@@ -42,7 +43,7 @@ export async function generateMetadata({
   const { id } = await params;
   const unit = getCatalog().units.find((u) => u.id === id);
   if (!unit) return {};
-  // The root layout supplies the "· Wow Units" suffix through its template.
+  // The root layout supplies the "· Oddly Satisfying Motion" suffix through its template.
   return { title: unit.name, description: unit.summary };
 }
 
@@ -62,6 +63,10 @@ export default async function UnitPage({
     label: unit.name,
     rows: [],
   };
+
+  // unit.json `states` is optional until every unit declares it; no table, no TOC entry.
+  const states = unit.states ?? [];
+  const toc = states.length > 0 ? [["states", "States"] as const, ...TOC] : TOC;
 
   const chips = [
     `haptic ≤ ${unit.spec.hapticBudgetMs} ms`,
@@ -122,7 +127,7 @@ export default async function UnitPage({
         <aside className="hidden min-w-0 lg:block lg:sticky lg:top-20 lg:self-start">
           <p className="eyebrow text-muted">On this page</p>
           <ul className="mt-2.5 space-y-1">
-            {TOC.map(([anchor, label]) => (
+            {toc.map(([anchor, label]) => (
               <li key={anchor}>
                 <a
                   href={`#${anchor}`}
@@ -145,6 +150,15 @@ export default async function UnitPage({
         </aside>
 
         <div>
+          {states.length > 0 && (
+            <section className="mb-12">
+              <SectionHeading id="states" title="States" />
+              <div className="mt-4">
+                <StatesTable states={states} />
+              </div>
+            </section>
+          )}
+
           <UnitLive
             unitId={unit.id}
             unitName={unit.name}
@@ -155,6 +169,7 @@ export default async function UnitPage({
             lane={lane}
             axisMs={lanes.axisMs}
             tickMs={lanes.tickMs}
+            hasRecording={hasMedia(`${unit.id}-full.mp4`)}
           />
 
           <section className="mt-12">

@@ -1,5 +1,14 @@
 {
   "version": 1,
   "core": "_core/WowCore.swift",
-  "units": ["press", "success-check", "reward-burst"]
+  "units": [
+    "press",
+    "success-check",
+    "reward-burst",
+    "loading-morph",
+    "hold-fill",
+    "icon-swap",
+    "label-roll",
+    "failure-shake"
+  ]
 }

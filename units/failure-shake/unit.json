@@ -1,0 +1,41 @@
+{
+  "id": "failure-shake",
+  "name": "Failure Shake",
+  "layer": "primitive",
+  "summary": "Validation failed: one horizontal damped shake (+8, −6, +4, −2 pt, at rest again in 0.40 s) with the .error haptic on the first frame, and an optional destructive tint for the length of the shake. Only for a real rejection, never to draw attention.",
+  "tags": { "surface": ["button"], "trigger": ["error"], "intent": ["guide"] },
+  "core": "_core/WowCore.swift",
+  "platforms": { "swiftui": { "file": "WowFailureShake.swift", "minIOS": 16, "entry": "WowFailureShake / .wowFailureShake(trigger:)" } },
+  "spec": { "hapticBudgetMs": 50, "visualBudgetMs": 85, "hapticMaxDurationMs": 120 },
+  "accessibility": {
+    "reduceMotion": "no translation; opacity dips 1 → 0.6 → 1 over 0.2 s; same .error haptic at t = 0, same tint",
+    "hapticsOptional": true,
+    "voiceOver": "no strings of its own; announce the error from the control you own"
+  },
+  "sound": null,
+  "builtWith": ["TimelineView(.animation)", "offset(x:)", "opacity", "environment(\\.self, _:)", "tint", "foregroundStyle", "CHHapticEngine"],
+  "sources": [
+    "Apple, Human Interface Guidelines: Playing haptics (notification feedback: Error)",
+    "Apple, Human Interface Guidelines: SF Symbols, Animations: Wiggle (symbolEffect(.wiggle), iOS 18), the system's own one-line shake, for symbols only",
+    "macOS login window: a rejected password shakes side to side (platform convention)",
+    "SmoothUI, Unlock Face ID (Eduardo Calvo, MIT): failure = destructive red + one shake; no shake under reduced motion",
+    "Kaaresoja, Brewster & Lantz, ACM TAP 11(2), 2014"
+  ],
+  "states": [
+    {
+      "state": "idle",
+      "motion": "at rest in the host's own styling; trigger going back to false is silent",
+      "haptic": "none"
+    },
+    {
+      "state": "shaking",
+      "motion": "damped horizontal sine, +8 → −6 → +4 → −2 → 0 pt (peaks at 24, 82, 151, 247 ms), ease-out over duration (0.40 s); tint, if set, from the first frame; false → true again restarts from the first swing. Reduce Motion: no translation, opacity 1 → 0.6 → 1 over 0.2 s",
+      "haptic": ".error at t = 0 (three transients over 120 ms), before any visual work: failure never waits"
+    },
+    {
+      "state": "settled",
+      "motion": "at rest; tint eases back over 0.15 s. A shake whose trigger was reset mid-way lands in idle instead",
+      "haptic": "none"
+    }
+  ]
+}

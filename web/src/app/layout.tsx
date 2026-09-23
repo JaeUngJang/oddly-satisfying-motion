@@ -6,7 +6,7 @@ import { Pageview } from "@/components/Pageview";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 
-const TITLE = "Wow Units";
+const TITLE = "Oddly Satisfying Motion";
 const DESCRIPTION =
   "Animated SwiftUI button units with haptics and timing. Copy two files. Nothing to configure.";
 

@@ -1,4 +1,4 @@
-# WowDemo — measurement harness for the Wow Units.
+# WowDemo — measurement harness for the Oddly Satisfying Motion.
 #
 # The unit files are referenced BY PATH, not copied: the demo compiles
 # ../units/_core/WowCore.swift and the three unit files in place, so what you measure here is
@@ -41,14 +41,9 @@ targets:
         excludes:
           - "**/*.json"
       # The real unit files, compiled in place. Paths are relative to this spec.
-      - path: ../units/_core/WowCore.swift
-        group: Units/_core
-      - path: ../units/press/WowPress.swift
-        group: Units/press
-      - path: ../units/success-check/WowSuccessCheck.swift
-        group: Units/success-check
-      - path: ../units/reward-burst/WowRewardBurst.swift
-        group: Units/reward-burst
+      - path: ../units
+        excludes:
+          - "**/*.json"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.wowunits.demo

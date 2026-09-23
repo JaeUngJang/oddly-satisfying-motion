@@ -70,6 +70,24 @@ function usageFor(manifest, usageBlock) {
   return lines.length > 0 ? lines.join("\n") : manifest.platforms.swiftui.entry;
 }
 
+/** Same check as src/lib/units.ts: [{ state, motion, haptic }] or left out, with a warning. */
+function checkStates(id, raw) {
+  if (raw === undefined) return undefined;
+  const ok =
+    Array.isArray(raw) &&
+    raw.every(
+      (row) =>
+        typeof row?.state === "string" &&
+        typeof row?.motion === "string" &&
+        typeof row?.haptic === "string",
+    );
+  if (ok) return raw;
+  console.warn(
+    `gen-ai: "${id}" unit.json \`states\` is not [{ state, motion, haptic }]; left out until it is`,
+  );
+  return undefined;
+}
+
 function loadCatalog() {
   const index = JSON.parse(read(path.join(UNITS_DIR, "index.json")));
   const usageBlock = readUsageBlock();
@@ -80,14 +98,31 @@ function loadCatalog() {
     source: read(path.join(UNITS_DIR, index.core)),
   };
 
-  const units = index.units.map((id) => {
-    const manifest = JSON.parse(read(path.join(UNITS_DIR, id, "unit.json")));
-    return {
-      ...manifest,
-      source: read(path.join(UNITS_DIR, id, manifest.platforms.swiftui.file)),
-      usage: usageFor(manifest, usageBlock),
-      mediaSrc: `/media/${manifest.id}.mp4`,
-    };
+  // Same rule as src/lib/units.ts: a listed unit whose unit.json or Swift file has not
+  // landed yet is skipped with a warning, so the index can be updated first.
+  const units = index.units.flatMap((id) => {
+    const manifestFile = path.join(UNITS_DIR, id, "unit.json");
+    if (!fs.existsSync(manifestFile)) {
+      console.warn(`gen-ai: skipping "${id}" (listed in units/index.json): no unit.json yet`);
+      return [];
+    }
+    const manifest = JSON.parse(read(manifestFile));
+    const swiftFile = path.join(UNITS_DIR, id, manifest.platforms.swiftui.file);
+    if (!fs.existsSync(swiftFile)) {
+      console.warn(
+        `gen-ai: skipping "${id}" (listed in units/index.json): no ${manifest.platforms.swiftui.file} yet`,
+      );
+      return [];
+    }
+    return [
+      {
+        ...manifest,
+        states: checkStates(id, manifest.states),
+        source: read(swiftFile),
+        usage: usageFor(manifest, usageBlock),
+        mediaSrc: `/media/${manifest.id}.mp4`,
+      },
+    ];
   });
 
   return { version: index.version, core, units, usageBlock };

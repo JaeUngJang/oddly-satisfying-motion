@@ -1,8 +1,8 @@
-# Wow Units (prototype)
+# Oddly Satisfying Motion (prototype)
 
 Animated SwiftUI button components with haptics and timing, delivered as **files you copy**, not a package you depend on.
 
-Wow Units is free. There is no paid tier and none is planned. Units are added in the open; requests and contributions go through GitHub: <https://github.com/JaeUngJang/wow-units>.
+Oddly Satisfying Motion is free. There is no paid tier and none is planned. Units are added in the open; requests and contributions go through GitHub: <https://github.com/JaeUngJang/oddly-satisfying-motion>.
 
 License: MIT
 

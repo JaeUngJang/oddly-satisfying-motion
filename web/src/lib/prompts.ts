@@ -10,8 +10,8 @@ const TAG_AXES = ["surface", "trigger", "intent"] as const;
 
 export function buildLibraryPrompt(catalog: Catalog): string {
   return [
-    "# Wow Units, for AI coding agents",
-    "You are adding Wow Units to a SwiftUI iOS app (minimum iOS 16). Rules:",
+    "# Oddly Satisfying Motion, for AI coding agents",
+    "You are adding Oddly Satisfying Motion to a SwiftUI iOS app (minimum iOS 16). Rules:",
     "- Copy files verbatim. Do not modify them, do not add a package.",
     `- ${catalog.core.fileName} is required once per app target. Units depend only on it.`,
     "- Style is injected via parameters; never hard-code colors in the unit files.",
@@ -32,6 +32,17 @@ export function buildUnitPrompt(unit: Unit, core: Core): string {
   const tags = TAG_AXES.map(
     (axis) => `${axis}=${unit.tags[axis].join("+")}`,
   ).join(", ");
+  // unit.json `states`, when the unit declares them: the phases the file already
+  // implements, listed so an agent does not re-implement or strip one.
+  const states = unit.states?.length
+    ? [
+        "## States",
+        ...unit.states.map(
+          (row) => `- ${row.state} · motion: ${row.motion} · haptic: ${row.haptic}`,
+        ),
+        "",
+      ]
+    : [];
 
   return [
     `# Wow Unit: ${unit.name} (${unit.id})`,
@@ -46,6 +57,7 @@ export function buildUnitPrompt(unit: Unit, core: Core): string {
     `3. Use it: ${unit.usage.split("\n").join("\n   ")}`,
     "4. Do not add a Swift package, do not change the deployment target below iOS 16, do not hard-code colors; pass `tint:`/style parameters instead.",
     "",
+    ...states,
     `## A. ${core.fileName}`,
     "```swift",
     core.source.trimEnd(),

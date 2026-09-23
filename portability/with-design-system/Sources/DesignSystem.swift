@@ -1,4 +1,4 @@
-// DesignSystem.swift — this host's OWN tokens and button style, independent of Wow Units.
+// DesignSystem.swift — this host's OWN tokens and button style, independent of Oddly Satisfying Motion.
 // The units must adopt these via their own injected-style parameters (scale:/tint:),
 // never by editing unit source.
 import SwiftUI

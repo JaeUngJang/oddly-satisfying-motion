@@ -4,7 +4,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { Catalog, Core, Unit, UnitManifest, UnitTile } from "./types";
+import type { Catalog, Core, Unit, UnitManifest, UnitState, UnitTile } from "./types";
 
 /** Works whether the build runs in web/ or in the prototype root. */
 function resolveRepoRoot(): string {
@@ -20,6 +20,7 @@ function resolveRepoRoot(): string {
 const REPO_ROOT = resolveRepoRoot();
 const UNITS_DIR = path.join(REPO_ROOT, "units");
 const README = path.join(REPO_ROOT, "README.md");
+const MEDIA_DIR = path.join(REPO_ROOT, "web", "public", "media");
 
 function read(file: string): string {
   return fs.readFileSync(file, "utf8");
@@ -31,8 +32,66 @@ function readIndex(): Index {
   return JSON.parse(read(path.join(UNITS_DIR, "index.json"))) as Index;
 }
 
-function readManifest(id: string): UnitManifest {
-  return JSON.parse(read(path.join(UNITS_DIR, id, "unit.json"))) as UnitManifest;
+/** Warnings already printed: every page reads the catalog, so each prints once (per worker). */
+const warned = new Set<string>();
+
+function warnOnce(key: string, message: string) {
+  if (warned.has(key)) return;
+  warned.add(key);
+  console.warn(message);
+}
+
+function skip(id: string, why: string): null {
+  warnOnce(id, `units: skipping "${id}" (listed in units/index.json): ${why}`);
+  return null;
+}
+
+/**
+ * unit.json `states` in the shape Tests/ContractTests decodes: [{ state, motion, haptic }].
+ * Any other shape is dropped with a warning, so the page omits the table instead of a
+ * renderer failing on it; the contract test is what rejects the unit.
+ */
+function checkStates(id: string, raw: unknown): UnitState[] | undefined {
+  if (raw === undefined) return undefined;
+  const ok =
+    Array.isArray(raw) &&
+    raw.every(
+      (row) =>
+        typeof row?.state === "string" &&
+        typeof row?.motion === "string" &&
+        typeof row?.haptic === "string",
+    );
+  if (ok) return raw as UnitState[];
+  warnOnce(
+    `${id}:states`,
+    `units: "${id}" unit.json \`states\` is not [{ state, motion, haptic }]; left out until it is`,
+  );
+  return undefined;
+}
+
+/**
+ * A unit listed in index.json whose folder is not complete yet is skipped with a warning
+ * instead of failing the build: the index is updated first and the files land after it,
+ * so a unit that has no unit.json or no Swift file yet is simply not on the site yet.
+ * A unit.json that exists but does not parse still fails: that is a broken unit.
+ */
+function loadUnit(id: string, usageBlock: string): Unit | null {
+  const manifestFile = path.join(UNITS_DIR, id, "unit.json");
+  if (!fs.existsSync(manifestFile)) return skip(id, "no unit.json yet");
+  const manifest = JSON.parse(read(manifestFile)) as UnitManifest;
+
+  const swiftFile = path.join(UNITS_DIR, id, manifest.platforms.swiftui.file);
+  if (!fs.existsSync(swiftFile)) {
+    return skip(id, `no ${manifest.platforms.swiftui.file} yet`);
+  }
+
+  return {
+    ...manifest,
+    states: checkStates(id, manifest.states),
+    source: read(swiftFile),
+    usage: usageFor(manifest, usageBlock),
+    mediaSrc: `/media/${manifest.id}.mp4`,
+  };
 }
 
 /** The first ```swift fence in README.md — the canonical usage lines. */
@@ -75,21 +134,21 @@ export function getCatalog(): Catalog {
   const index = readIndex();
   const usageBlock = readUsageBlock();
 
-  const units: Unit[] = index.units.map((id) => {
-    const manifest = readManifest(id);
-    return {
-      ...manifest,
-      source: read(path.join(UNITS_DIR, id, manifest.platforms.swiftui.file)),
-      usage: usageFor(manifest, usageBlock),
-      mediaSrc: `/media/${manifest.id}.mp4`,
-    };
-  });
+  const units = index.units
+    .map((id) => loadUnit(id, usageBlock))
+    .filter((unit): unit is Unit => unit !== null);
 
   return { version: index.version, core: getCore(), units, usageBlock };
 }
 
+/** Ids that have a page: the listed units that loaded, not every id in index.json. */
 export function getUnitIds(): string[] {
-  return readIndex().units;
+  return getCatalog().units.map((unit) => unit.id);
+}
+
+/** Whether web/public/media/<file> exists, checked at build time. */
+export function hasMedia(file: string): boolean {
+  return fs.existsSync(path.join(MEDIA_DIR, file));
 }
 
 export function getUnit(id: string): Unit | undefined {

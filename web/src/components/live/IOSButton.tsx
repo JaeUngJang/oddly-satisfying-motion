@@ -30,12 +30,40 @@
 // the page is the unit's real `dim` parameter and the lab's pressed fill sits inside its
 // range. Scale is the same spring the Swift declares.
 // ────────────────────────────────────────────────────────────────────────────────────
+//
+// ── Press phases: `WowPressPhase` in units/_core/WowCore.swift ───────────────────────
+// A button that only knows "down" and "up" gets the edges wrong (dragged off, it stayed
+// pressed), so this runs the five phases the Swift documents, one for one:
+//
+//   idle         nothing in flight
+//   pressing     pointer down inside, or Space / Enter down. Spring to pressed; the
+//                haptic marker fires once per press, on entry (`onPressStart`)
+//   cancelled    dragged outside the button + 8 px slop, or Escape. easeOut 160 ms back
+//                to rest: no overshoot, no marker. Dragging back in resumes `pressing`
+//                silently; lifting outside ends the press still `cancelled`
+//   released     lifted inside, or the key comes up. Spring back with its overshoot;
+//                `onPressEnd` is where a SwiftUI Button runs its action
+//   interrupted  pointercancel, lostpointercapture, window or focus blur: the system
+//                took the touch. easeOut 120 ms to rest, no marker
+//
+// `idle` is reported the moment a press is over, after whichever of the last three it
+// ended in: the same contract as `wowPress { phase in … }` in units/press/WowPress.swift,
+// where `onPhaseChange` hears every transition. The curves are that file's `curve(into:)`.
+//
+// The pointer is captured on touch-down, so moves outside the button keep arriving and
+// are hit-tested; the listeners sit on `window`, so a press whose capture could not be
+// taken still ends. The hit test uses the LAYOUT box (`.wow-glass`, unscaled), not the
+// button under its press transform: at `scale: 0.90` the pressed capsule is 15 px
+// narrower a side, and testing against it would flip a finger resting near the edge
+// between pressing and cancelled on every frame.
+// ────────────────────────────────────────────────────────────────────────────────────
 
 import {
   useCallback,
   useEffect,
   useId,
   useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefObject,
@@ -48,6 +76,25 @@ const PRESS_DIM = 0.06;
 /** Reduce Motion: `.opacity(0.75)` over `.easeOut(duration: 0.12)`. */
 const REDUCED_OPACITY = 0.75;
 const REDUCED_SECONDS = 0.12;
+/** `cancelled`: back to rest without the spring's overshoot. */
+const CANCEL_SECONDS = 0.16;
+/** `interrupted`: the system took the touch; snap to rest. */
+const INTERRUPT_SECONDS = 0.12;
+/** Slop around the layout box before a drag counts as outside, px (1 pt = 1 px here). */
+const HIT_SLOP = 8;
+
+/** `WowPressPhase` in units/_core/WowCore.swift, one for one. */
+export type PressPhase = "idle" | "pressing" | "cancelled" | "released" | "interrupted";
+
+/** How a transition moves: SwiftUI's spring, or an easeOut leg of a set length. */
+type Curve = { kind: "spring" } | { kind: "ease"; seconds: number };
+
+const SPRING: Curve = { kind: "spring" };
+const CANCEL: Curve = { kind: "ease", seconds: CANCEL_SECONDS };
+const INTERRUPT: Curve = { kind: "ease", seconds: INTERRUPT_SECONDS };
+
+/** The press in flight: the pointer or key that owns it, and whether it is over the button. */
+type Press = { pointerId: number | null; key: string | null; inside: boolean };
 
 const GLASS_CSS = `
 .wow-glass {
@@ -145,9 +192,18 @@ type Props = {
   pressScale?: number;
   /** `wowPress(dim:)`, an ADDITIVE darkening, same as SwiftUI's `.brightness(-dim)`. */
   pressDim?: number;
-  /** Touch-down. This is t = 0 for the whole run. */
+  /**
+   * idle → pressing: touch-down or key-down. This is t = 0 for the whole run, and it fires
+   * once per press: a drag that comes back inside does not fire it again.
+   */
   onPressStart: () => void;
+  /** `released`: lifted inside. Where a SwiftUI Button runs its action. */
   onPressEnd?: () => void;
+  /**
+   * Every transition, as the Swift reports them: `idle` follows `released`, `cancelled` or
+   * `interrupted` the moment the press is over.
+   */
+  onPhaseChange?: (phase: PressPhase) => void;
   /** The button's layout box, for a port that needs to position an overlay against it. */
   hostRef?: RefObject<HTMLDivElement | null>;
   /** Drawn above the button and outside its transform, the way a SwiftUI `.overlay` is. */
@@ -163,6 +219,7 @@ export function IOSButton({
   pressDim = PRESS_DIM,
   onPressStart,
   onPressEnd,
+  onPhaseChange,
   hostRef,
   overlay,
 }: Props) {
@@ -173,8 +230,13 @@ export function IOSButton({
 
   // One normalised value drives both properties, because SwiftUI drives both from one
   // `.animation(…, value: pressed)`: scale = 1 − (1 − scale)·p, brightness = −dim·p.
+  // Two curves can move it: the spring (pressing, released) and an easeOut leg (the
+  // cancel and interrupt returns, and every transition under Reduce Motion).
   const spring = useRef(createSpring(0.18, 0.7, 0));
-  const tween = useRef({ from: 0, to: 0, elapsed: 0, running: false });
+  const tween = useRef({ from: 0, to: 0, elapsed: 0, seconds: REDUCED_SECONDS });
+  const driver = useRef<Curve["kind"]>("spring");
+  /** p as last painted: where a handover from one curve to the other starts. */
+  const shown = useRef(0);
   const frame = useRef(0);
   const last = useRef(0);
   const scale = useLatest(timeScale);
@@ -182,6 +244,9 @@ export function IOSButton({
   // Read per frame, so moving a slider mid-press lands on the very next frame.
   const pressScaleRef = useLatest(pressScale);
   const pressDimRef = useLatest(pressDim);
+  const onPressStartRef = useLatest(onPressStart);
+  const onPressEndRef = useLatest(onPressEnd);
+  const onPhaseChangeRef = useLatest(onPhaseChange);
 
   const paint = useCallback(
     (p: number) => {
@@ -214,20 +279,25 @@ export function IOSButton({
   );
 
   const drive = useCallback(
-    (target: number) => {
-      if (reducedRef.current) {
-        // Reduce Motion gets `.easeOut(duration: 0.12)`, not a spring. Retargeting mid-tween
-        // starts from where the curve actually is, so a fast double press does not jump.
+    (target: number, curve: Curve) => {
+      // Reduce Motion has one curve for every transition, `.easeOut(duration: 0.12)`.
+      const how: Curve = reducedRef.current ? { kind: "ease", seconds: REDUCED_SECONDS } : curve;
+
+      if (how.kind === "spring") {
+        // Retargeting keeps velocity, so a re-press mid-return keeps its momentum. Coming
+        // off an easeOut leg, the spring starts where that leg actually is.
+        if (driver.current !== "spring") spring.current.jump(shown.current);
+        spring.current.retarget(target);
+      } else {
+        // Starts from what is on screen, so a fast double press or a cancel mid-spring
+        // does not jump.
         const t = tween.current;
-        t.from = t.running
-          ? t.from + (t.to - t.from) * easeOut(Math.min(t.elapsed / REDUCED_SECONDS, 1))
-          : t.to;
+        t.from = shown.current;
         t.to = target;
         t.elapsed = 0;
-        t.running = true;
-      } else {
-        spring.current.retarget(target);
+        t.seconds = how.seconds;
       }
+      driver.current = how.kind;
 
       if (frame.current) return;
       last.current = performance.now();
@@ -241,18 +311,18 @@ export function IOSButton({
         let p: number;
         let done: boolean;
 
-        if (reducedRef.current) {
+        if (driver.current === "ease") {
           const t = tween.current;
           t.elapsed += dt;
-          const progress = Math.min(t.elapsed / REDUCED_SECONDS, 1);
+          const progress = Math.min(t.elapsed / t.seconds, 1);
           p = t.from + (t.to - t.from) * easeOut(progress);
           done = progress >= 1;
-          if (done) t.running = false;
         } else {
           p = spring.current.step(dt);
           done = spring.current.settled;
         }
 
+        shown.current = p;
         paint(p);
         frame.current = done ? 0 : requestAnimationFrame(loop);
       };
@@ -269,30 +339,185 @@ export function IOSButton({
     [],
   );
 
-  const down = useRef(false);
+  // ── The phase machine. See the header for the table it implements. ─────────────────
+  const press = useRef<Press | null>(null);
 
-  const press = useCallback(() => {
-    if (down.current) return;
-    down.current = true;
-    drive(1);
-    onPressStart();
-  }, [drive, onPressStart]);
+  const report = useCallback(
+    (phase: PressPhase) => onPhaseChangeRef.current?.(phase),
+    [onPhaseChangeRef],
+  );
 
-  const release = useCallback(() => {
-    if (!down.current) return;
-    down.current = false;
-    drive(0);
-    onPressEnd?.();
-  }, [drive, onPressEnd]);
+  /** idle → pressing: the one place the haptic marker and t = 0 come from. */
+  const begin = useCallback(
+    (pointerId: number | null, key: string | null) => {
+      press.current = { pointerId, key, inside: true };
+      drive(1, SPRING);
+      onPressStartRef.current();
+      report("pressing");
+    },
+    [drive, onPressStartRef, report],
+  );
+
+  /** pressing → cancelled, still held: the finger went outside. */
+  const leave = useCallback(() => {
+    const current = press.current;
+    if (!current?.inside) return;
+    current.inside = false;
+    drive(0, CANCEL);
+    report("cancelled");
+  }, [drive, report]);
+
+  /** cancelled → pressing, same press: back inside. No marker, no new t = 0. */
+  const enter = useCallback(() => {
+    const current = press.current;
+    if (!current || current.inside) return;
+    current.inside = true;
+    drive(1, SPRING);
+    report("pressing");
+  }, [drive, report]);
+
+  /** Lifted. Inside it is `released` and the action runs; outside it stays `cancelled`. */
+  const lift = useCallback(() => {
+    const current = press.current;
+    if (!current) return;
+    press.current = null;
+    if (current.inside) {
+      drive(0, SPRING);
+      report("released");
+      onPressEndRef.current?.();
+    }
+    report("idle");
+  }, [drive, onPressEndRef, report]);
+
+  /** Escape: the press is retracted. Nothing resumes it and the later key-up does nothing. */
+  const retract = useCallback(() => {
+    const current = press.current;
+    if (!current) return;
+    press.current = null;
+    if (current.inside) {
+      drive(0, CANCEL);
+      report("cancelled");
+    }
+    report("idle");
+  }, [drive, report]);
+
+  /** The system took the touch, inside or already dragged out. */
+  const interrupt = useCallback(() => {
+    if (!press.current) return;
+    press.current = null;
+    drive(0, INTERRUPT);
+    report("interrupted");
+    report("idle");
+  }, [drive, report]);
+
+  /** Inside the unscaled layout box plus HIT_SLOP. The header says why not the button's rect. */
+  const isInside = useCallback((x: number, y: number) => {
+    const box = wrapRef.current?.parentElement?.getBoundingClientRect();
+    if (!box) return false;
+    return (
+      x >= box.left - HIT_SLOP &&
+      x <= box.right + HIT_SLOP &&
+      y >= box.top - HIT_SLOP &&
+      y <= box.bottom + HIT_SLOP
+    );
+  }, []);
+
+  useEffect(() => {
+    const owns = (event: PointerEvent) => press.current?.pointerId === event.pointerId;
+
+    const move = (event: PointerEvent) => {
+      if (!owns(event)) return;
+      if (isInside(event.clientX, event.clientY)) enter();
+      else leave();
+    };
+    const up = (event: PointerEvent) => {
+      if (!owns(event)) return;
+      // Where it lifts decides, not the last move: a flick can end with no move between.
+      move(event);
+      lift();
+    };
+    const cancel = (event: PointerEvent) => {
+      if (owns(event)) interrupt();
+    };
+
+    // Capture phase, so nothing else on the page can swallow the end of a press.
+    window.addEventListener("pointermove", move, true);
+    window.addEventListener("pointerup", up, true);
+    window.addEventListener("pointercancel", cancel, true);
+    window.addEventListener("blur", interrupt);
+    return () => {
+      window.removeEventListener("pointermove", move, true);
+      window.removeEventListener("pointerup", up, true);
+      window.removeEventListener("pointercancel", cancel, true);
+      window.removeEventListener("blur", interrupt);
+    };
+  }, [enter, interrupt, isInside, leave, lift]);
 
   /** Stand-in for the device tilt iOS reads off the gyro: the sweep follows the pointer. */
   const sweep = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
     const button = buttonRef.current;
     if (!button) return;
     const rect = button.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    // Clamped: under capture the pointer can be far outside, and the sweep stays on the rim.
+    const x = Math.min(Math.max(((event.clientX - rect.left) / rect.width) * 100, 0), 100);
     button.style.setProperty("--wow-spec-x", `${x.toFixed(1)}%`);
   }, []);
+
+  const onPointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      sweep(event);
+      // Primary button only, and one press at a time: a second finger is ignored.
+      if (event.button !== 0 || press.current) return;
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        // Not a live pointer (a synthetic event). The window listeners still follow it.
+      }
+      begin(event.pointerId, null);
+    },
+    [begin, sweep],
+  );
+
+  const onLostPointerCapture = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      // A child's implicit touch capture handing over to the button bubbles here too; only
+      // the button's own capture ending means the system took the pointer. After a normal
+      // lift the press is already over, so this does nothing then.
+      if (event.target !== event.currentTarget) return;
+      if (press.current?.pointerId === event.pointerId) interrupt();
+    },
+    [interrupt],
+  );
+
+  const onKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+      if (event.key === "Escape") {
+        if (!press.current) return;
+        event.preventDefault();
+        retract();
+        return;
+      }
+      if (event.key !== " " && event.key !== "Enter") return;
+      event.preventDefault();
+      // Auto-repeat is the same press held down, not a new one.
+      if (!event.repeat && !press.current) begin(null, event.key);
+    },
+    [begin, retract],
+  );
+
+  const onKeyUp = useCallback(
+    (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+      if (event.key !== " " && event.key !== "Enter") return;
+      event.preventDefault();
+      if (press.current?.key === event.key) lift();
+    },
+    [lift],
+  );
+
+  /** Focus leaving mid key-press means the key-up will never reach this button. */
+  const onBlur = useCallback(() => {
+    if (press.current?.key) interrupt();
+  }, [interrupt]);
 
   return (
     <div className="wow-glass" ref={hostRef}>
@@ -337,24 +562,12 @@ export function IOSButton({
           type="button"
           aria-label={ariaLabel}
           className="wow-glass-btn"
-          onPointerDown={(event) => {
-            sweep(event);
-            press();
-          }}
+          onPointerDown={onPointerDown}
           onPointerMove={sweep}
-          onPointerUp={release}
-          onPointerCancel={release}
-          onPointerLeave={release}
-          onKeyDown={(event) => {
-            if (event.key !== " " && event.key !== "Enter") return;
-            event.preventDefault();
-            if (!event.repeat) press();
-          }}
-          onKeyUp={(event) => {
-            if (event.key !== " " && event.key !== "Enter") return;
-            event.preventDefault();
-            release();
-          }}
+          onLostPointerCapture={onLostPointerCapture}
+          onKeyDown={onKeyDown}
+          onKeyUp={onKeyUp}
+          onBlur={onBlur}
           onContextMenu={(event) => event.preventDefault()}
         >
           <span className="wow-glass-tint" />

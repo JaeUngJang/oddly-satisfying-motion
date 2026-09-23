@@ -3,7 +3,7 @@
 // LiveSuccessCheck.tsx — units/success-check/WowSuccessCheck.swift, in the browser,
 // wearing the demo's recipe around it (demo/Sources/ContentView.swift, column B):
 //
-//   press → ProgressView for 0.6 s → WowSuccessCheck in the label
+//   release → ProgressView for 0.6 s → WowSuccessCheck in the label
 //
 // Choreography, straight out of the Swift's `start()`:
 //   ring    spring(response 0.28, dampingFraction 0.72), scale 0.6 → 1
@@ -17,9 +17,12 @@
 // check on the stage is the check the copied line draws. None of the timings depend on
 // them — the choreography is fixed in the Swift — so the lane does not move when they do.
 //
-// One deliberate difference from the demo: SwiftUI's `Button(action:)` fires on touch-UP,
-// this starts the recipe on touch-DOWN. The lane's t = 0 is the press, so starting anywhere
-// else would put a variable, unmeasured gap in front of every number on it.
+// The recipe starts where the demo's does: on the release, the Button's action. This is a
+// complete-triggered unit, so a press that ends `cancelled` or `interrupted` runs nothing.
+// The lane still starts at touch-down with the press's own tap at 0; the recipe's marks are
+// declared from the release (lanes.json `anchor: "release"`), so it reads tap at 0 →
+// released at N → loading, ring, draw and `.success` from N. A new touch-down is a new run:
+// whatever the last run left on the stage is dropped, so the stage and the lane agree.
 
 import { memo, useCallback, useEffect, useRef, useState, type Ref, type RefObject } from "react";
 import { IOSButton } from "./IOSButton";
@@ -43,6 +46,7 @@ export const LiveSuccessCheck = memo(function LiveSuccessCheck({
   reduced,
   timeScale,
   onPress,
+  onPhaseChange,
   emit,
   resetKey,
   params,
@@ -104,12 +108,19 @@ export const LiveSuccessCheck = memo(function LiveSuccessCheck({
     frame.current = settled ? 0 : requestAnimationFrame(tick);
   }, [reducedRef, scale]);
 
-  const press = useCallback(() => {
+  /** Touch-down: a new run starts at t = 0 with the press's tap, and nothing else yet. */
+  const down = useCallback(() => {
     stop();
+    setStage("idle");
     onPress();
     // The button under the check is `.wowPress()`, whose own haptic this unit does not own;
     // `haptic` here is WowSuccessCheck's `.success` pulse and gates only that one.
     emit("haptic", "check-tap");
+  }, [emit, onPress, stop]);
+
+  /** `released`: the Button's action, which is where the recipe starts. */
+  const run = useCallback(() => {
+    stop();
     emit("visual", "check-loading");
 
     spring.current.jump(0);
@@ -118,11 +129,11 @@ export const LiveSuccessCheck = memo(function LiveSuccessCheck({
     last.current = t0.current;
     frame.current = requestAnimationFrame(tick);
 
-    // Every offset below is measured from the press, so they are all scheduled here
+    // Every offset below is measured from the release, so they are all scheduled here
     // rather than nested inside one another.
     const isReduced = reducedRef.current;
-    const after = (seconds: number, run: () => void) =>
-      timers.current.after(seconds * 1000 * scale.current, run);
+    const after = (seconds: number, task: () => void) =>
+      timers.current.after(seconds * 1000 * scale.current, task);
 
     after(LOADING, () => {
       setStage("done");
@@ -138,7 +149,7 @@ export const LiveSuccessCheck = memo(function LiveSuccessCheck({
         emit("haptic", "check-success"),
       );
     }
-  }, [emit, haptic, onPress, reducedRef, scale, stop, tick]);
+  }, [emit, haptic, reducedRef, scale, stop, tick]);
 
   useEffect(() => stop, [stop]);
 
@@ -173,7 +184,9 @@ export const LiveSuccessCheck = memo(function LiveSuccessCheck({
       ariaLabel="Subscribe, press to run the success check"
       reduced={reduced}
       timeScale={timeScale}
-      onPressStart={press}
+      onPressStart={down}
+      onPressEnd={run}
+      onPhaseChange={onPhaseChange}
     />
   );
 });

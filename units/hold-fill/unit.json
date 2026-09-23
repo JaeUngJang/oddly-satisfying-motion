@@ -1,0 +1,73 @@
+{
+  "id": "hold-fill",
+  "name": "Hold Fill",
+  "layer": "primitive",
+  "summary": "Hold to confirm: the label fills leading to trailing, linear over 2 s, while the finger stays down; .success and the action land on the frame the fill completes. Lifting early or leaving the label retracts it in 0.2 s.",
+  "tags": {
+    "surface": [
+      "button"
+    ],
+    "trigger": [
+      "long-press"
+    ],
+    "intent": [
+      "confirm"
+    ]
+  },
+  "core": "_core/WowCore.swift",
+  "platforms": {
+    "swiftui": {
+      "file": "WowHoldFill.swift",
+      "minIOS": 16,
+      "entry": "WowHoldFill / .wowHoldFill(onConfirm:)"
+    }
+  },
+  "spec": {
+    "hapticBudgetMs": 50,
+    "visualBudgetMs": 85,
+    "hapticMaxDurationMs": 120
+  },
+  "states": [
+    {
+      "state": "pressing",
+      "motion": "scale 0.97, easeOut 0.16 s; fill 0 to 100 % leading to trailing, linear over duration (2 s)",
+      "haptic": ".tap once, on touch-down, before any visual work"
+    },
+    {
+      "state": "cancelled",
+      "motion": "lifted early or left the label: fill retracts, easeOut 0.20 s; scale back, easeOut 0.16 s. Re-entering does not resume; the next touch-down starts over",
+      "haptic": "none"
+    },
+    {
+      "state": "released",
+      "motion": "confirmed, finger still down: fill holds full 0.12 s, then fades 0.20 s; scale returns with spring(response 0.28, damping 0.72)",
+      "haptic": ".success with onConfirm, on the frame the fill completes"
+    },
+    {
+      "state": "interrupted",
+      "motion": "the system took the touch: snap to idle, no animation",
+      "haptic": "none"
+    }
+  ],
+  "accessibility": {
+    "reduceMotion": "no scale; the fill still runs because it is the countdown, not decoration",
+    "hapticsOptional": true,
+    "voiceOver": "accessibility action \"Confirm\" runs onConfirm without holding"
+  },
+  "sound": null,
+  "builtWith": [
+    "LongPressGesture",
+    "DragGesture",
+    "@GestureState",
+    "mask",
+    "RoundedRectangle(style: .continuous)",
+    "linear(duration:)",
+    "CHHapticEngine"
+  ],
+  "sources": [
+    "Emil Kowalski, hold-to-delete component, emilkowal.ski/ui/building-a-hold-to-delete-component",
+    "Robinhood Support, buying a stock (swipe up to submit an order), robinhood.com/us/en/support/articles/buying-a-stock",
+    "Apple Human Interface Guidelines, Buttons, developer.apple.com/design/human-interface-guidelines/buttons",
+    "Kaaresoja, Brewster & Lantz, ACM TAP 11(2), 2014"
+  ]
+}
