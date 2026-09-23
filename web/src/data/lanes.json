@@ -1,5 +1,5 @@
 {
-  "_note": "Per-unit timing lanes, milliseconds from touch-down. These are what the interactive ports in src/components/live run against: a port lights a marker by its `id` at the moment the thing actually happens, so the ids here and the emit() calls there are one set. The numbers stay the units' declared budgets, taken from the Swift. success-check is measured from the press, so it carries the demo recipe's 600 ms loading stage in front of the check's own 0.06/0.30/0.34 s choreography.",
+  "_note": "Per-unit timing lanes, milliseconds from touch-down. These are what the interactive ports in src/components/live run against: a port lights a marker by its `id` at the moment the thing actually happens, so the ids here and the emit() calls there are one set. The numbers stay the units' declared budgets, taken from the Swift. Marks with `anchor: release` are counted from the release (the Button's action) instead of touch-down: success-check and reward-burst are complete-triggered, so their sequence starts only when a press is released inside, and the lane draws those marks from the live release time, after the press's own tap at 0. success-check carries the demo recipe's 600 ms loading stage in front of the check's own 0.06/0.30/0.34 s choreography. loading-morph, icon-swap, label-roll and failure-shake also run on the release; loading-morph carries the demo recipe's 900 ms stand-in for the network before its result. hold-fill is counted from touch-down, because the hold is its trigger, and its release is the confirm, which lands while the finger is still down. A budget that is a parameter of the call (hold-fill duration, icon-swap revertAfter, failure-shake duration) is written here at the Swift default; the live lane redraws it for the values the run used (src/components/live/stage.ts).",
   "axisMs": 1200,
   "tickMs": 200,
   "units": {
@@ -25,9 +25,9 @@
           "id": "visual",
           "label": "visual",
           "marks": [
-            { "id": "check-loading", "label": "loading", "from": 0, "to": 600 },
-            { "id": "check-ring", "label": "ring", "from": 600, "to": 960 },
-            { "id": "check-draw", "label": "draw", "from": 660, "to": 960 }
+            { "id": "check-loading", "label": "loading", "from": 0, "to": 600, "anchor": "release" },
+            { "id": "check-ring", "label": "ring", "from": 600, "to": 960, "anchor": "release" },
+            { "id": "check-draw", "label": "draw", "from": 660, "to": 960, "anchor": "release" }
           ]
         },
         {
@@ -35,7 +35,7 @@
           "label": "haptic",
           "marks": [
             { "id": "check-tap", "label": "tap", "t": 0 },
-            { "id": "check-success", "label": "success", "t": 940 }
+            { "id": "check-success", "label": "success", "t": 940, "anchor": "release" }
           ]
         }
       ]
@@ -46,12 +46,121 @@
         {
           "id": "visual",
           "label": "visual",
-          "marks": [{ "id": "burst-visual", "label": "particles", "from": 0, "to": 1000 }]
+          "marks": [
+            { "id": "burst-visual", "label": "particles", "from": 0, "to": 1000, "anchor": "release" }
+          ]
         },
         {
           "id": "haptic",
           "label": "haptic",
-          "marks": [{ "id": "burst-haptic", "label": "burst", "t": 0 }]
+          "marks": [
+            { "id": "burst-tap", "label": "tap", "t": 0 },
+            { "id": "burst-haptic", "label": "burst", "t": 0, "anchor": "release" }
+          ]
+        }
+      ]
+    },
+    "loading-morph": {
+      "label": "Loading Morph",
+      "rows": [
+        {
+          "id": "visual",
+          "label": "visual",
+          "marks": [
+            { "id": "morph-loading", "label": "loading", "from": 0, "to": 160, "anchor": "release" },
+            { "id": "morph-check", "label": "check", "from": 900, "to": 1100, "anchor": "release" },
+            { "id": "morph-xmark", "label": "xmark", "from": 900, "to": 1100, "anchor": "release" }
+          ]
+        },
+        {
+          "id": "haptic",
+          "label": "haptic",
+          "marks": [
+            { "id": "morph-success", "label": "success", "t": 1080, "anchor": "release" },
+            { "id": "morph-error", "label": "error", "t": 900, "anchor": "release" }
+          ]
+        }
+      ]
+    },
+    "hold-fill": {
+      "label": "Hold Fill",
+      "rows": [
+        {
+          "id": "visual",
+          "label": "visual",
+          "marks": [
+            { "id": "hold-press", "label": "press", "from": 0, "to": 160 },
+            { "id": "hold-sweep", "label": "fill", "from": 0, "to": 2000 },
+            { "id": "hold-fade", "label": "fade", "from": 120, "to": 320, "anchor": "release" }
+          ]
+        },
+        {
+          "id": "haptic",
+          "label": "haptic",
+          "marks": [
+            { "id": "hold-tap", "label": "tap", "t": 0 },
+            { "id": "hold-success", "label": "success", "t": 0, "anchor": "release" }
+          ]
+        }
+      ]
+    },
+    "icon-swap": {
+      "label": "Icon Swap",
+      "rows": [
+        {
+          "id": "visual",
+          "label": "visual",
+          "marks": [
+            { "id": "swap-in", "label": "swap", "from": 0, "to": 300, "anchor": "release" },
+            { "id": "swap-revert", "label": "revert", "from": 1500, "to": 1800, "anchor": "release" }
+          ]
+        },
+        {
+          "id": "haptic",
+          "label": "haptic",
+          "marks": [
+            { "id": "swap-success", "label": "success", "t": 100, "anchor": "release" }
+          ]
+        }
+      ]
+    },
+    "label-roll": {
+      "label": "Label Roll",
+      "rows": [
+        {
+          "id": "visual",
+          "label": "visual",
+          "marks": [
+            { "id": "roll-up", "label": "roll up", "from": 0, "to": 300, "anchor": "release" },
+            { "id": "roll-down", "label": "roll down", "from": 0, "to": 300, "anchor": "release" }
+          ]
+        },
+        {
+          "id": "haptic",
+          "label": "haptic",
+          "marks": [
+            { "id": "roll-tap", "label": "tap", "t": 0, "anchor": "release" }
+          ]
+        }
+      ]
+    },
+    "failure-shake": {
+      "label": "Failure Shake",
+      "rows": [
+        {
+          "id": "visual",
+          "label": "visual",
+          "marks": [
+            { "id": "shake-motion", "label": "shake", "from": 0, "to": 400, "anchor": "release" },
+            { "id": "shake-tint", "label": "tint back", "from": 400, "to": 550, "anchor": "release" }
+          ]
+        },
+        {
+          "id": "haptic",
+          "label": "haptic",
+          "marks": [
+            { "id": "shake-error", "label": "error", "t": 0, "anchor": "release" }
+          ]
         }
       ]
     }

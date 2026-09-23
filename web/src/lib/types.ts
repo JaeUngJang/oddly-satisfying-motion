@@ -20,6 +20,16 @@ export type UnitPlatform = {
   entry: string;
 };
 
+/**
+ * One row of unit.json `states` (CONTRIBUTING.md rule 9): which motion and which haptic
+ * belong to a phase. Pressable units list `WowPressPhase`; sequence units list their own.
+ */
+export type UnitState = {
+  state: string;
+  motion: string;
+  haptic: string;
+};
+
 export type UnitManifest = {
   id: string;
   name: string;
@@ -33,6 +43,8 @@ export type UnitManifest = {
   sound: string | null;
   builtWith: string[];
   sources: string[];
+  /** Optional until every unit declares it; the site omits what a unit does not list. */
+  states?: UnitState[];
 };
 
 /** A manifest plus everything the site needs to render it. */
@@ -69,6 +81,13 @@ export type TimelineMark = {
   /** Span, ms. */
   from?: number;
   to?: number;
+  /** Drawn as a ring: an event placed when it happened, not at a budget (a cancel). */
+  hollow?: boolean;
+  /**
+   * `release`: the times count from the release (the Button's action), not touch-down.
+   * The live lane draws the mark from wherever the release actually happened.
+   */
+  anchor?: "release";
 };
 
 export type TimelineRow = {

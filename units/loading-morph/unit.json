@@ -1,0 +1,73 @@
+{
+  "id": "loading-morph",
+  "name": "Loading Morph",
+  "layer": "primitive",
+  "summary": "The button owns the wait: the label blurs into the system spinner, then the result glyph springs in, all inside one fixed frame. No haptic on entering loading; .success lands as the checkmark settles (+0.18 s), .error fires at once.",
+  "tags": {
+    "surface": [
+      "button"
+    ],
+    "trigger": [
+      "complete"
+    ],
+    "intent": [
+      "convert"
+    ]
+  },
+  "core": "_core/WowCore.swift",
+  "platforms": {
+    "swiftui": {
+      "file": "WowLoadingMorph.swift",
+      "minIOS": 16,
+      "entry": "WowLoadingMorph"
+    }
+  },
+  "spec": {
+    "hapticBudgetMs": 50,
+    "visualBudgetMs": 85,
+    "hapticMaxDurationMs": 120
+  },
+  "accessibility": {
+    "reduceMotion": "cross-fades only: no blur, no scale; same timings; haptics at the same moments",
+    "hapticsOptional": true,
+    "voiceOver": "label names the action (\"Checkout\") and never changes; loadingLabel (\"Checking out…\") is the value while loading; both strings injectable, nothing hard-coded"
+  },
+  "sound": null,
+  "builtWith": [
+    "ProgressView",
+    "blur(radius:)",
+    "scaleEffect",
+    "spring(response:dampingFraction:)",
+    "Image(systemName:)",
+    "CHHapticEngine"
+  ],
+  "sources": [
+    "Apple, Human Interface Guidelines: Buttons (activity indicator inside the button, \"Checkout\" → \"Checking out…\")",
+    "Family, morphing button label (Benji Taylor, \"Family Values\", 2024)",
+    "motion.dev, Multi-state Badge example (BKMN, 2025)",
+    "Emil Kowalski, 7 Practical Animation Tips: blur as the bridge between two states",
+    "Kaaresoja, Brewster & Lantz, ACM TAP 11(2), 2014"
+  ],
+  "states": [
+    {
+      "state": "idle",
+      "motion": "label at rest in a frame already sized for the widest state; returning from any phase is a 160 ms cross-fade",
+      "haptic": "none"
+    },
+    {
+      "state": "loading",
+      "motion": "label blurs out (opacity 1→0, blur 0→4 pt) over 120 ms easeOut; system spinner (.small, 14 pt) fades in over 120 ms from +40 ms",
+      "haptic": "none: the user just pressed and knows"
+    },
+    {
+      "state": "success",
+      "motion": "outgoing content fades out over 100 ms; checkmark scales 0.6→1 on spring 0.28/0.72 while fading in over 120 ms",
+      "haptic": ".success at +180 ms, as the glyph settles (full size at 152 ms, crest at 202 ms); dropped if the phase changes first"
+    },
+    {
+      "state": "failure",
+      "motion": "same as success, with an xmark",
+      "haptic": ".error at +0 ms, before any visual work: failure never waits"
+    }
+  ]
+}

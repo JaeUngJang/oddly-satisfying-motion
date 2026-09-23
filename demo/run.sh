@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run.sh — generate, build, install and launch the Wow Units demo on the iPhone 16 simulator.
+# run.sh — generate, build, install and launch the Oddly Satisfying Motion demo on the iPhone 16 simulator.
 #
 # Usage:  demo/run.sh            (from anywhere; paths are resolved from the script's location)
 #         WOW_SIM_UDID=... demo/run.sh   to target a different simulator

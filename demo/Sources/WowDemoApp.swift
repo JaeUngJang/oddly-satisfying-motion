@@ -1,4 +1,4 @@
-// WowDemoApp.swift — entry point for the Wow Units demo / measurement harness.
+// WowDemoApp.swift — entry point for the Oddly Satisfying Motion demo / measurement harness.
 
 import SwiftUI
 

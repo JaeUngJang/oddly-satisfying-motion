@@ -1,4 +1,4 @@
-// Probe.swift — DEBUG-only latency + frame-time probe for the Wow Units demo.
+// Probe.swift — DEBUG-only latency + frame-time probe for the Oddly Satisfying Motion demo.
 //
 // Ground rule: measurement code must not distort what it measures.
 //   1. The hot path only appends a (name, timestamp) pair to an array that already owns its

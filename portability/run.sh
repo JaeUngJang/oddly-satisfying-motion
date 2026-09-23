@@ -1,5 +1,5 @@
 #!/bin/bash
-# portability/run.sh — proves the Wow Units portability contract: copy WowCore.swift + a unit's
+# portability/run.sh — proves the Oddly Satisfying Motion portability contract: copy WowCore.swift + a unit's
 # .swift file into a fresh host and it builds with zero edits. Three deliberately different hosts:
 #   ios16-uikit-mixed   iOS 16.0, UIKit AppDelegate/SceneDelegate lifecycle, no SwiftUI @main App
 #   ios17-swiftui       iOS 17.0, pure SwiftUI @main App
@@ -21,12 +21,7 @@ UNITS_DIR="$SCRIPT_DIR/../units"
 DERIVED_DATA_ROOT="$HOME/Library/Developer/Xcode/DerivedData"
 LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/wowport-logs.XXXXXX")"
 
-UNIT_FILES=(
-  "$UNITS_DIR/_core/WowCore.swift"
-  "$UNITS_DIR/press/WowPress.swift"
-  "$UNITS_DIR/success-check/WowSuccessCheck.swift"
-  "$UNITS_DIR/reward-burst/WowRewardBurst.swift"
-)
+UNIT_FILES=("$UNITS_DIR/_core/WowCore.swift" $(ls "$UNITS_DIR"/*/Wow*.swift | grep -v "/_core/"))
 
 DIRS=(ios16-uikit-mixed ios17-swiftui with-design-system swift6-strict)
 SCHEMES=(WowPort1 WowPort2 WowPort3 WowPort4)

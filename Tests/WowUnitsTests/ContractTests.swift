@@ -1,4 +1,4 @@
-// ContractTests.swift — enforces the Wow Units "portability contract":
+// ContractTests.swift — enforces the Oddly Satisfying Motion "portability contract":
 // each unit is ONE self-contained Swift file, depends only on WowCore.swift,
 // requires no app configuration, and declares budgets that match its unit.json.
 //
@@ -41,7 +41,13 @@ final class ContractTests: XCTestCase {
             }
             let swiftui: SwiftUIPlatform
         }
+        struct State: Decodable {
+            let state: String
+            let motion: String
+            let haptic: String
+        }
         let id: String
+        let states: [State]?
         let core: String
         let platforms: Platforms
         let spec: Spec
@@ -83,6 +89,11 @@ final class ContractTests: XCTestCase {
         case "press": return WowPressStyle.spec
         case "success-check": return WowSuccessCheck.spec
         case "reward-burst": return WowRewardBurst.spec
+        case "loading-morph": return WowLoadingMorph.spec
+        case "hold-fill": return WowHoldFill.spec
+        case "icon-swap": return WowIconSwap.spec
+        case "label-roll": return WowLabelRoll.spec
+        case "failure-shake": return WowFailureShake.spec
         default:
             throw ContractTestError.unmappedUnit(id)
         }
@@ -142,7 +153,7 @@ final class ContractTests: XCTestCase {
     // a 3,200 ms reward vibration tested worse than no vibration at all.
 
     func testBudgetsWithinEvidenceWindows() {
-        let specs: [WowSpec] = [WowPressStyle.spec, WowSuccessCheck.spec, WowRewardBurst.spec]
+        let specs: [WowSpec] = [WowPressStyle.spec, WowSuccessCheck.spec, WowRewardBurst.spec, WowLoadingMorph.spec, WowHoldFill.spec, WowIconSwap.spec, WowLabelRoll.spec, WowFailureShake.spec]
         XCTAssertEqual(Set(specs.map(\.id)).count, specs.count, "Duplicate unit ids among specs under test")
 
         for spec in specs {
@@ -199,6 +210,32 @@ final class ContractTests: XCTestCase {
     }
 
     // MARK: - 4. Index integrity
+
+    // Rule 9 of the contract: every unit documents its interaction states with a motion and a
+    // haptic per state; pressable units (tap / long-press) name pressing, released and cancelled.
+    func testStatesDocumented() throws {
+        for id in try Self.decodeIndex().units {
+            let unit = try Self.decodeUnitJSON(id: id)
+            let states = try XCTUnwrap(unit.states, "\(id): unit.json has no `states` array")
+            XCTAssertGreaterThanOrEqual(states.count, 3, "\(id): fewer than 3 documented states")
+            for st in states {
+                XCTAssertFalse(st.state.isEmpty || st.motion.isEmpty || st.haptic.isEmpty,
+                               "\(id): a state entry is missing state/motion/haptic text")
+            }
+            let names = Set(states.map { $0.state })
+            let raw = try Data(contentsOf: Self.unitsDir.appendingPathComponent("\(id)/unit.json"))
+            let text = String(decoding: raw, as: UTF8.self)
+            // A unit owns the press when it is the press unit itself, is driven by a long press,
+            // or declares a `pressing` state. Units merely triggered by a tap (icon-swap, label-roll)
+            // leave the press to the button they sit in.
+            let ownsPress = id == "press" || text.contains("\"long-press\"") || names.contains("pressing")
+            if ownsPress {
+                for required in ["pressing", "released", "cancelled"] {
+                    XCTAssertTrue(names.contains(required), "\(id): pressable unit must document `\(required)`")
+                }
+            }
+        }
+    }
 
     func testIndexIntegrity() throws {
         let fm = FileManager.default

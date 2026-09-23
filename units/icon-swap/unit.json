@@ -1,0 +1,65 @@
+{
+  "id": "icon-swap",
+  "name": "Icon Swap",
+  "layer": "primitive",
+  "summary": "Copy → Copied: the glyph swaps to a checkmark (SF Symbols Replace on iOS 17+, spring cross-fade on 16), .success haptic lands as the checkmark appears, then it swaps back on its own, silently.",
+  "tags": {
+    "surface": [
+      "button"
+    ],
+    "trigger": [
+      "tap"
+    ],
+    "intent": [
+      "confirm"
+    ]
+  },
+  "core": "_core/WowCore.swift",
+  "platforms": {
+    "swiftui": {
+      "file": "WowIconSwap.swift",
+      "minIOS": 16,
+      "entry": "WowIconSwap"
+    }
+  },
+  "spec": {
+    "hapticBudgetMs": 50,
+    "visualBudgetMs": 85,
+    "hapticMaxDurationMs": 120
+  },
+  "accessibility": {
+    "reduceMotion": "no scale, no Replace effect; 0.15 s cross-fade; same .success haptic, at +0.10 s",
+    "hapticsOptional": true,
+    "voiceOver": "label names the action (\"Copy\") and never changes; value is \"Copied\" while swapped, spoken on the activated element; both strings injectable"
+  },
+  "sound": null,
+  "builtWith": [
+    "Image(systemName:)",
+    "contentTransition(.symbolEffect(.replace))",
+    "spring(response:dampingFraction:)",
+    "CHHapticEngine"
+  ],
+  "sources": [
+    "Apple, Human Interface Guidelines: SF Symbols, Animations (Replace, Magic Replace)",
+    "motion.dev, Copy Button example (Matt Perry, 2026)",
+    "Vercel, Geist design system: copy button",
+    "Kaaresoja, Brewster & Lantz, ACM TAP 11(2), 2014"
+  ],
+  "states": [
+    {
+      "state": "idle",
+      "motion": "`from` glyph at rest in a fixed size × size box",
+      "haptic": "none"
+    },
+    {
+      "state": "swapped",
+      "motion": "iOS 17+: contentTransition(.symbolEffect(.replace.downUp)) under spring 0.3/0.8; iOS 16: same spring cross-fade, incoming 0.6→1, outgoing 1→0.6",
+      "haptic": ".success at +100 ms, as the `to` glyph appears; dropped if reverted first"
+    },
+    {
+      "state": "reverted",
+      "motion": "same transition back to `from`, after revertAfter (1.5 s; 0 = never) or at once when trigger goes false",
+      "haptic": "none: a timer or the caller did it, not a tap"
+    }
+  ]
+}

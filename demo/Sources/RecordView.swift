@@ -2,15 +2,18 @@
 //
 //   xcrun simctl launch <udid> dev.wowunits.demo --record hero-b
 //
-// Modes: hero-a | hero-b | press | success-check | reward-burst
+// Modes: hero-a | hero-b | press | success-check | reward-burst | loading-morph | loading-morph-fail
+//        | hold-fill | icon-swap | label-roll | failure-shake
 // Auto-run modes start their sequence `t0` seconds after appear so clips trim deterministically.
-// `press` runs nothing: it is tapped by hand while recording.
+// `press` and `hold-fill` run nothing: they are triggered by hand while recording.
 
 import SwiftUI
 
 struct RecordView: View {
     enum Mode: String {
         case heroA = "hero-a", heroB = "hero-b", press, successCheck = "success-check", rewardBurst = "reward-burst"
+        case loadingMorph = "loading-morph", loadingMorphFail = "loading-morph-fail"
+        case holdFill = "hold-fill", iconSwap = "icon-swap", labelRoll = "label-roll", failureShake = "failure-shake"
     }
     enum Stage { case idle, loading, done }
 
@@ -20,6 +23,10 @@ struct RecordView: View {
     @State private var stage: Stage = .idle
     @State private var check = false
     @State private var burst = false
+    @State private var loadPhase: WowLoadPhase = .idle
+    @State private var iconSwapTrigger = false
+    @State private var likeCount: Double = 1204
+    @State private var failureShakeTrigger = false
 
     var body: some View {
         ZStack {
@@ -42,6 +49,7 @@ struct RecordView: View {
         case .press: return "Continue"
         case .successCheck: return "Save"
         case .rewardBurst: return "Claim"
+        case .loadingMorph, .loadingMorphFail, .holdFill, .iconSwap, .labelRoll, .failureShake: return ""
         }
     }
 
@@ -68,6 +76,39 @@ struct RecordView: View {
             }
             .wowPress()
             .wowRewardBurst(trigger: burst, count: 32, tint: .accentColor)
+        case .loadingMorph, .loadingMorphFail:
+            Button(action: {}) {
+                WowLoadingMorph(phase: loadPhase, label: "Checkout")
+                    .frame(maxWidth: .infinity, minHeight: 22)
+                    .ctaLook()
+            }
+        case .holdFill:
+            Text("Delete")
+                .frame(maxWidth: .infinity, minHeight: 22)
+                .ctaLook(tint: .red)
+                .wowHoldFill(duration: 2.0, tint: .white, onConfirm: {})
+        case .iconSwap:
+            Button(action: {}) {
+                WowIconSwap(trigger: iconSwapTrigger, tint: .white)
+                    .frame(width: 52, height: 52)
+                    .background(Color.accentColor, in: Capsule())
+            }
+        case .labelRoll:
+            Button(action: {}) {
+                HStack {
+                    Text("Like")
+                    WowLabelRoll(value: likeCount, tint: .white)
+                }
+                .frame(maxWidth: .infinity, minHeight: 22)
+                .ctaLook()
+            }
+        case .failureShake:
+            Button(action: {}) {
+                Text("Pay $12.00")
+                    .frame(maxWidth: .infinity, minHeight: 22)
+                    .ctaLook()
+            }
+            .wowFailureShake(trigger: failureShakeTrigger)
         }
     }
 
@@ -107,6 +148,24 @@ struct RecordView: View {
             }
         case .rewardBurst:
             after(t0) { burst = true }
+        case .holdFill:
+            break
+        case .loadingMorph:
+            after(t0) { loadPhase = .loading }
+            after(t0 + 0.9) { loadPhase = .success }
+        case .loadingMorphFail:
+            after(t0) { loadPhase = .loading }
+            after(t0 + 0.9) { loadPhase = .failure }
+        case .iconSwap:
+            after(t0) { iconSwapTrigger = true }
+        case .labelRoll:
+            after(t0) { likeCount = 1205 }
+            after(t0 + 0.8) { likeCount = 1206 }
+            after(t0 + 1.6) { likeCount = 1205 }
+        case .failureShake:
+            after(t0) { failureShakeTrigger = true }
+            after(t0 + 0.6) { failureShakeTrigger = false }
+            after(t0 + 1.4) { failureShakeTrigger = true }
         }
     }
 
@@ -117,12 +176,12 @@ struct RecordView: View {
 
 private extension View {
     /// Same look as the demo's column B (a hand-built `.borderedProminent` + `.controlSize(.large)`).
-    func ctaLook() -> some View {
+    func ctaLook(tint: Color = .accentColor) -> some View {
         self
             .font(.body)
             .foregroundStyle(.white)
             .padding(.vertical, 15)
             .padding(.horizontal, 20)
-            .background(Color.accentColor, in: Capsule())
+            .background(tint, in: Capsule())
     }
 }

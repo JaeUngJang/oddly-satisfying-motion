@@ -169,7 +169,21 @@ export function MeasurementLane({ lane, axisMs, tickMs, playheadMs }: Props) {
                       vectorEffect="non-scaling-stroke"
                       className={tone.stroke}
                     />
-                    <circle cx={px} cy={y} r={2.2} className={tone.fill} />
+                    {mark.hollow ? (
+                      // A ring, not a dot: placed when it happened, not at a budget.
+                      // The page-colour fill cuts the tick, so it reads as open.
+                      <circle
+                        cx={px}
+                        cy={y}
+                        r={2.6}
+                        stroke="currentColor"
+                        strokeWidth={1}
+                        vectorEffect="non-scaling-stroke"
+                        className={`${tone.stroke} fill-bg`}
+                      />
+                    ) : (
+                      <circle cx={px} cy={y} r={2.2} className={tone.fill} />
+                    )}
                   </g>
                 );
               })}

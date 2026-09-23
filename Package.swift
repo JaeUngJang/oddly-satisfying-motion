@@ -15,6 +15,11 @@ let package = Package(
                 "press/unit.json",
                 "success-check/unit.json",
                 "reward-burst/unit.json",
+                "loading-morph/unit.json",
+                "hold-fill/unit.json",
+                "icon-swap/unit.json",
+                "label-roll/unit.json",
+                "failure-shake/unit.json",
             ]
         ),
         .testTarget(

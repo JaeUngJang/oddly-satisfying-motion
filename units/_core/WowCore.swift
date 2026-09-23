@@ -1,4 +1,4 @@
-// WowCore.swift — Wow Units core. Copy this ONE file into your app target, once.
+// WowCore.swift — Oddly Satisfying Motion core. Copy this ONE file into your app target, once.
 // Every unit depends only on this file. No package, no framework, nothing to configure.
 // Minimum iOS 16. Safe on simulator and on devices without Core Haptics (falls back, never crashes).
 //
@@ -7,6 +7,7 @@
 //   WowSettings — app-level opt-outs (haptics optional, per Apple HIG)
 //   WowMotion   — Reduce Motion read for non-View code
 //   WowSpec     — per-unit declared budgets (units keep these in sync with unit.json)
+//   WowPressPhase — the interaction states every pressable unit documents and implements
 //   WowProbe    — zero-cost measurement hooks (nil by default; demo app installs handlers)
 //   wowOnChange — onChange that compiles warning-free from iOS 16 to current
 //
@@ -45,6 +46,21 @@ struct WowSpec: Equatable {
     let visualBudgetMs: Int
     /// longest haptic pattern this unit plays, ms (short by design; long vibration tests worse than none)
     let hapticMaxDurationMs: Int
+}
+
+// MARK: - Interaction phases
+
+/// The states a pressable unit moves through. Every unit that reacts to a press documents,
+/// in its unit.json `states`, which motion and which haptic belong to each phase.
+///
+///   idle        nothing is happening
+///   pressing    finger down inside the control (haptic fires once, on entry)
+///   cancelled   finger dragged outside, released outside, or the press was retracted:
+///               return without overshoot, no haptic; re-entering resumes `pressing` silently
+///   released    finger lifted inside: the action fires; return with the spring's overshoot
+///   interrupted the system took the touch (scroll, call, gesture conflict): snap to idle, no haptic
+enum WowPressPhase: Equatable {
+    case idle, pressing, cancelled, released, interrupted
 }
 
 // MARK: - Probe hooks

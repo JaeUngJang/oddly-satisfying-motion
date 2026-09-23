@@ -14,7 +14,7 @@ export function SiteNav() {
           href="/"
           className="text-[14px] font-medium tracking-[-0.01em] text-ink hover:underline"
         >
-          Wow Units
+          <span className="sm:hidden">Oddly</span><span className="hidden sm:inline">Oddly Satisfying Motion</span>
         </Link>
 
         {/* Spacing separates the links; a middle dot between them is decoration. */}

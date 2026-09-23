@@ -2,13 +2,19 @@
   "id": "press",
   "name": "Press",
   "layer": "primitive",
-  "summary": "Touch-down acknowledgement: scale + dim with spring return, .tap haptic fired before any visual work.",
+  "summary": "Touch-down acknowledgement with system-button states: scale + dim and one .tap haptic per touch, silent cancel on drag-out and re-entry, spring back on release, snap back when the system takes the touch.",
   "tags": { "surface": ["button"], "trigger": ["tap"], "intent": ["confirm"] },
   "core": "_core/WowCore.swift",
   "platforms": { "swiftui": { "file": "WowPress.swift", "minIOS": 16, "entry": "WowPressStyle / .wowPress()" } },
   "spec": { "hapticBudgetMs": 50, "visualBudgetMs": 85, "hapticMaxDurationMs": 60 },
-  "accessibility": { "reduceMotion": "no scale, opacity dip", "hapticsOptional": true },
+  "states": [
+    { "state": "pressing", "motion": "finger down inside: scale 1 → 0.96 + brightness −0.06, spring(response 0.18, damping 0.7)", "haptic": ".tap once per touch, at touch-down, before any visual work" },
+    { "state": "released", "motion": "lifted while still pressed: back to 1.0 with the same spring, overshoot allowed; the Button's action fires", "haptic": "none (the next unit owns the result)" },
+    { "state": "cancelled", "motion": "dragged out past the Button's ~70 pt touch slop, held or lifted there: back to 1.0 with easeOut 0.16 s, no overshoot; dragging back resumes pressing", "haptic": "none; re-entry does not replay .tap" },
+    { "state": "interrupted", "motion": "system took the touch (scroll, call, gesture conflict): snap back to 1.0 with easeOut 0.12 s", "haptic": "none" }
+  ],
+  "accessibility": { "reduceMotion": "no scale, opacity dip to 0.75, easeOut 0.12 s for every state; phases and haptic unchanged", "hapticsOptional": true },
   "sound": null,
-  "builtWith": ["ButtonStyle", "scaleEffect", "brightness", "spring(response:dampingFraction:)", "CHHapticEngine"],
+  "builtWith": ["ButtonStyle", "scaleEffect", "brightness", "spring(response:dampingFraction:)", "UIGestureRecognizer", "UIViewRepresentable", "GeometryReader", "CHHapticEngine"],
   "sources": ["Kaaresoja, Brewster & Lantz, ACM TAP 11(2), 2014"]
 }
